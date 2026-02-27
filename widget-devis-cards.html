@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demandes de devis récentes</title>
+    <style>
+        /* Variables */
+        :root {
+            --primary-color: #0066cc;
+            --primary-hover: #0052a3;
+            --secondary-color: #f3f4f6;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        /* Base */
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #fafbfc; color: var(--text-color); line-height: 1.6; }
+
+        /* Container */
+        .devis-widget-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .devis-widget-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .devis-widget-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .devis-widget-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .devis-widget-view-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .devis-widget-view-all:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Grid */
+        .devis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .devis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card */
+        .devis-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .devis-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .devis-card-header {
+            margin-bottom: 1rem;
+        }
+
+        .devis-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-color);
+            line-height: 1.3;
+        }
+
+        .devis-card-category {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .devis-card-location {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .devis-card-body {
+            flex: 1;
+            margin-bottom: 1rem;
+        }
+
+        .devis-card-description {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .devis-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .devis-card-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .devis-card-urgency {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .devis-urgency-normal {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .devis-urgency-urgent {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        /* Loading / Error */
+        .devis-widget-loading,
+        .devis-widget-error {
+            text-align: center;
+            padding: 3rem 1rem;
+            font-size: 1.125rem;
+            color: var(--text-muted);
+        }
+
+        .devis-widget-error {
+            color: #dc2626;
+        }
+
+        /* Slider (optional for mobile) */
+        .devis-slider-container {
+            display: none;
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .devis-slider-container {
+                display: block;
+            }
+            .devis-grid {
+                display: none;
+            }
+        }
+
+        .devis-slider {
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1rem;
+            gap: 1rem;
+            display: flex;
+        }
+
+        .devis-slider::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .devis-slider::-webkit-scrollbar-track {
+            background: var(--secondary-color);
+            border-radius: 4px;
+        }
+
+        .devis-slider::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .devis-slide {
+            flex: 0 0 280px;
+            scroll-snap-align: start;
+        }
+    </style>
+</head>
+<body>
+    <div class="devis-widget-container">
+        <header class="devis-widget-header">
+            <h2 class="devis-widget-title">Demandes de devis récentes</h2>
+            <p class="devis-widget-subtitle">Découvrez les derniers projets proposés par les particuliers</p>
+            <a href="https://pro.indebel.be/devis" class="devis-widget-view-all">
+                Voir toutes les demandes
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </header>
+
+        <!-- Grid version (desktop) -->
+        <div class="devis-grid" id="devisGrid">
+            <div class="devis-widget-loading">Chargement des demandes...</div>
+        </div>
+
+        <!-- Slider version (mobile) -->
+        <div class="devis-slider-container">
+            <div class="devis-slider" id="devisSlider">
+                <!-- Cards will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const API_BASE = 'https://api.indebel.be/api';
+            const LIMIT = 8;
+            const GRID_ID = 'devisGrid';
+            const SLIDER_ID = 'devisSlider';
+            const DETAIL_BASE = 'https://pro.indebel.be/devis';
+
+            function formatDate(dateStr) {
+                if (!dateStr) return 'Date non spécifiée';
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return 'Date invalide';
+                return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+
+            function truncateText(text, maxLength = 120) {
+                if (text.length <= maxLength) return text;
+                return text.slice(0, maxLength).trim() + '…';
+            }
+
+            function createCard(devis) {
+                const urgencyClass = devis.urgence === 'urgent' ? 'devis-urgency-urgent' : 'devis-urgency-normal';
+                const location = `${devis.ville}, ${devis.region}`;
+                const description = truncateText(devis.description || '', 120);
+                const detailUrl = `${DETAIL_BASE}/${devis.id}`;
+
+                return `
+                    <article class="devis-card" onclick="window.open('${detailUrl}', '_blank')">
+                        <div class="devis-card-header">
+                            <h3 class="devis-card-title">${devis.type_travaux}</h3>
+                            <div class="devis-card-category">${devis.categorie || 'Non spécifiée'}</div>
+                            <div class="devis-card-location">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                </svg>
+                                ${location}
+                            </div>
+                        </div>
+                        <div class="devis-card-body">
+                            <p class="devis-card-description">${description}</p>
+                        </div>
+                        <div class="devis-card-footer">
+                            <time class="devis-card-date">${formatDate(devis.created_at)}</time>
+                            <span class="devis-card-urgency ${urgencyClass}">${devis.urgence || 'normal'}</span>
+                        </div>
+                    </article>
+                `;
+            }
+
+            function renderGrid(devis) {
+                const grid = document.getElementById(GRID_ID);
+                if (!grid) return;
+                grid.innerHTML = devis.map(createCard).join('');
+            }
+
+            function renderSlider(devis) {
+                const slider = document.getElementById(SLIDER_ID);
+                if (!slider) return;
+                slider.innerHTML = devis.map(d => `<div class="devis-slide">${createCard(d)}</div>`).join('');
+            }
+
+            function renderError(message) {
+                const grid = document.getElementById(GRID_ID);
+                const slider = document.getElementById(SLIDER_ID);
+                const errorHtml = `<div class="devis-widget-error">Erreur de chargement : ${message}</div>`;
+                if (grid) grid.innerHTML = errorHtml;
+                if (slider) slider.innerHTML = errorHtml;
+            }
+
+            async function fetchDevis() {
+                try {
+                    const response = await fetch(`${API_BASE}/devis/valides?limit=${LIMIT}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (!data.success || !Array.isArray(data.data)) throw new Error('Format de réponse invalide');
+                    return data.data;
+                } catch (err) {
+                    console.error('Erreur fetch devis:', err);
+                    renderError(err.message);
+                    return null;
+                }
+            }
+
+            async function init() {
+                const devis = await fetchDevis();
+                if (!devis) return;
+                renderGrid(devis);
+                renderSlider(devis);
+            }
+
+            // Init when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>

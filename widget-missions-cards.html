@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Missions récentes</title>
+    <style>
+        /* Variables */
+        :root {
+            --primary-color: #0066cc;
+            --primary-hover: #0052a3;
+            --secondary-color: #f3f4f6;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        /* Base */
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #fafbfc; color: var(--text-color); line-height: 1.6; }
+
+        /* Container */
+        .missions-widget-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .missions-widget-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .missions-widget-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .missions-widget-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .missions-widget-view-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .missions-widget-view-all:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Grid */
+        .missions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .missions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card */
+        .mission-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .mission-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .mission-card-header {
+            margin-bottom: 1rem;
+        }
+
+        .mission-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-color);
+            line-height: 1.3;
+        }
+
+        .mission-card-category {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .mission-card-location {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .mission-card-body {
+            flex: 1;
+            margin-bottom: 1rem;
+        }
+
+        .mission-card-description {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .mission-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .mission-card-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .mission-card-type {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .mission-type-hourly {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .mission-type-fixed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* Loading / Error */
+        .missions-widget-loading,
+        .missions-widget-error {
+            text-align: center;
+            padding: 3rem 1rem;
+            font-size: 1.125rem;
+            color: var(--text-muted);
+        }
+
+        .missions-widget-error {
+            color: #dc2626;
+        }
+
+        /* Slider (optional for mobile) */
+        .missions-slider-container {
+            display: none;
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .missions-slider-container {
+                display: block;
+            }
+            .missions-grid {
+                display: none;
+            }
+        }
+
+        .missions-slider {
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1rem;
+            gap: 1rem;
+            display: flex;
+        }
+
+        .missions-slider::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .missions-slider::-webkit-scrollbar-track {
+            background: var(--secondary-color);
+            border-radius: 4px;
+        }
+
+        .missions-slider::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .missions-slide {
+            flex: 0 0 280px;
+            scroll-snap-align: start;
+        }
+    </style>
+</head>
+<body>
+    <div class="missions-widget-container">
+        <header class="missions-widget-header">
+            <h2 class="missions-widget-title">Missions récentes</h2>
+            <p class="missions-widget-subtitle">Découvrez les dernières missions proposées par les entreprises</p>
+            <a href="https://pro.indebel.be/missions" class="missions-widget-view-all">
+                Voir toutes les missions
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </header>
+
+        <!-- Grid version (desktop) -->
+        <div class="missions-grid" id="missionsGrid">
+            <div class="missions-widget-loading">Chargement des missions...</div>
+        </div>
+
+        <!-- Slider version (mobile) -->
+        <div class="missions-slider-container">
+            <div class="missions-slider" id="missionsSlider">
+                <!-- Cards will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const API_BASE = 'https://api.indebel.be/api';
+            const LIMIT = 8;
+            const GRID_ID = 'missionsGrid';
+            const SLIDER_ID = 'missionsSlider';
+            const DETAIL_BASE = 'https://pro.indebel.be/missions';
+
+            function formatDate(dateStr) {
+                if (!dateStr) return 'Date non spécifiée';
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return 'Date invalide';
+                return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+
+            function truncateText(text, maxLength = 120) {
+                if (text.length <= maxLength) return text;
+                return text.slice(0, maxLength).trim() + '…';
+            }
+
+            function formatBudget(type, amount) {
+                if (!amount) return 'Non communiqué';
+                const currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+                if (type === 'hourly') return `${currency.format(amount)}/h`;
+                return currency.format(amount);
+            }
+
+            function createCard(mission) {
+                const typeClass = mission.type_mission === 'hourly' ? 'mission-type-hourly' : 'mission-type-fixed';
+                const typeLabel = mission.type_mission === 'hourly' ? 'Horaire' : 'Forfait';
+                const location = `${mission.ville}, ${mission.region}`;
+                const description = truncateText(mission.description || '', 120);
+                const detailUrl = `${DETAIL_BASE}/${mission.id}`;
+
+                return `
+                    <article class="mission-card" onclick="window.open('${detailUrl}', '_blank')">
+                        <div class="mission-card-header">
+                            <h3 class="mission-card-title">${mission.titre}</h3>
+                            <div class="mission-card-category">${mission.categorie || 'Non spécifiée'}</div>
+                            <div class="mission-card-location">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                </svg>
+                                ${location}
+                            </div>
+                        </div>
+                        <div class="mission-card-body">
+                            <p class="mission-card-description">${description}</p>
+                        </div>
+                        <div class="mission-card-footer">
+                            <time class="mission-card-date">${formatDate(mission.created_at)}</time>
+                            <span class="mission-card-type ${typeClass}">${typeLabel}</span>
+                        </div>
+                    </article>
+                `;
+            }
+
+            function renderGrid(missions) {
+                const grid = document.getElementById(GRID_ID);
+                if (!grid) return;
+                grid.innerHTML = missions.map(createCard).join('');
+            }
+
+            function renderSlider(missions) {
+                const slider = document.getElementById(SLIDER_ID);
+                if (!slider) return;
+                slider.innerHTML = missions.map(m => `<div class="missions-slide">${createCard(m)}</div>`).join('');
+            }
+
+            function renderError(message) {
+                const grid = document.getElementById(GRID_ID);
+                const slider = document.getElementById(SLIDER_ID);
+                const errorHtml = `<div class="missions-widget-error">Erreur de chargement : ${message}</div>`;
+                if (grid) grid.innerHTML = errorHtml;
+                if (slider) slider.innerHTML = errorHtml;
+            }
+
+            async function fetchMissions() {
+                try {
+                    const response = await fetch(`${API_BASE}/missions/publiques?limit=${LIMIT}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (!data.success || !Array.isArray(data.data)) throw new Error('Format de réponse invalide');
+                    return data.data;
+                } catch (err) {
+                    console.error('Erreur fetch missions:', err);
+                    renderError(err.message);
+                    return null;
+                }
+            }
+
+            async function init() {
+                const missions = await fetchMissions();
+                if (!missions) return;
+                renderGrid(missions);
+                renderSlider(missions);
+            }
+
+            // Init when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>
