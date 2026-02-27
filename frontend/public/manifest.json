@@ -1,0 +1,49 @@
+{
+  "name": "Indebel - Plateforme freelance belge",
+  "short_name": "Indebel",
+  "description": "La plateforme 100% belge pour connecter freelancers et entreprises",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0066cc",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Messagerie",
+      "short_name": "Messages",
+      "description": "Accéder à la messagerie",
+      "url": "/freelancer/mes-messages",
+      "icons": [{ "src": "/icon-message.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Missions",
+      "short_name": "Missions",
+      "description": "Voir les missions disponibles",
+      "url": "/freelancer/my-jobs",
+      "icons": [{ "src": "/icon-mission.png", "sizes": "96x96" }]
+    }
+  ]
+}

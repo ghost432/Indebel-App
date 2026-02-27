@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Auth - Indebel</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; background: #dc2626; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #b91c1c; }
+        .info { background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Authentification Indebel</h1>
+    
+    <div class="info">
+        <strong>Instructions :</strong>
+        <p>Si l'application reste bloquée sur l'écran de chargement, utilisez ces outils pour diagnostiquer et résoudre le problème.</p>
+    </div>
+    
+    <h2>État actuel</h2>
+    <div id="status"></div>
+    
+    <h2>Actions de correction</h2>
+    <button onclick="clearAuth()">Nettoyer l'authentification</button>
+    <button onclick="clearAll()">Tout effacer</button>
+    <button onclick="showStatus()">Afficher l'état</button>
+    <button onclick="testLogin()">Test connexion admin</button>
+    <button onclick="goToApp()">Retour à l'app</button>
+    
+    <div id="result"></div>
+
+    <script>
+        function showStatus() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            const status = `
+                <h3>LocalStorage:</h3>
+                <p><strong>Token:</strong> ${token ? 'Présent (' + token.length + ' chars)' : 'Absent'}</p>
+                <p><strong>User:</strong> ${user ? 'Présent' : 'Absent'}</p>
+                <h3>SessionStorage:</h3>
+                <p><strong>Éléments:</strong> ${sessionStorage.length}</p>
+            `;
+            
+            document.getElementById('status').innerHTML = status;
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ Authentification nettoyée</p>';
+            showStatus();
+        }
+        
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ Tout nettoyé</p>';
+            showStatus();
+        }
+        
+        async function testLogin() {
+            try {
+                document.getElementById('result').innerHTML = '<p style="color: blue;">🔄 Test de connexion...</p>';
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'mounchilithierry432@gmail.com',
+                        mot_de_passe: '123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.data.token);
+                    document.getElementById('result').innerHTML = '<p style="color: green;">✅ Connexion réussie! Token stocké.</p>';
+                    showStatus();
+                } else {
+                    document.getElementById('result').innerHTML = `<p style="color: red;">❌ Échec: ${data.message}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p style="color: red;">❌ Erreur: ${error.message}</p>`;
+            }
+        }
+        
+        function goToApp() {
+            window.location.href = '/';
+        }
+        
+        // Afficher l'état au chargement
+        showStatus();
+    </script>
+</body>
+</html>

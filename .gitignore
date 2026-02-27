@@ -2,11 +2,18 @@
 node_modules/
 
 # Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
+!.env.stripe.example
+
+# Backups and temporary files
+*.bak
+*.backup
+backups/
+*.sql
+!indebel_bd.sql
+!schema.md
+!*.example.sql
 
 # Logs
 logs
