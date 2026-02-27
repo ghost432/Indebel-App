@@ -3,6 +3,7 @@ node_modules/
 
 # Environment variables
 .env*
+production_deploy.env
 !.env.example
 !.env.stripe.example
 
