@@ -32,3 +32,8 @@ mobile/
 qwen/
 *.md
 *.sh
+.qwen/
+patch_*.js
+test*.js
+scratch*
+*.py
