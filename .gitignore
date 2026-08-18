@@ -28,3 +28,7 @@ backend/scripts/add-stripe-keys.sh
 
 backend/AJOUTER_CLES_STRIPE.md
 frontend/assets/
+mobile/
+qwen/
+*.md
+*.sh
