@@ -1,0 +1,104 @@
+- generic [ref=f3e429]:
+  - complementary [ref=f3e430]:
+    - link [ref=f3e433] [cursor=pointer]:
+      - /url: /
+      - img "Logo" [ref=f3e434]
+    - navigation [ref=f3e435]:
+      - link "Tableau de bord" [ref=f3e436] [cursor=pointer]:
+        - /url: /employer/dashboard
+      - button "Devis" [ref=f3e444] [cursor=pointer]
+      - button "Missions" [ref=f3e453] [cursor=pointer]
+      - link "Indépendants" [ref=f3e461] [cursor=pointer]:
+        - /url: /employer/list-freelancers
+      - link "Messages" [ref=f3e468] [cursor=pointer]:
+        - /url: /employer/mes-messages
+      - link "Forfaits" [ref=f3e472] [cursor=pointer]:
+        - /url: /employer/forfaits
+      - link "Support" [ref=f3e478] [cursor=pointer]:
+        - /url: /employer/support/create
+      - link "Notifications" [ref=f3e487] [cursor=pointer]:
+        - /url: /employer/notifications
+      - link "Profil" [ref=f3e492] [cursor=pointer]:
+        - /url: /employer/profile
+      - link "Paramètres" [ref=f3e497] [cursor=pointer]:
+        - /url: /employer/settings
+    - generic [ref=f3e502]:
+      - link "ET Entreprise Test Indebel Vérifié Entreprise • Gratuit" [ref=f3e503] [cursor=pointer]:
+        - /url: /employer/profile
+        - generic [ref=f3e504]:
+          - generic [ref=f3e505]: ET
+          - generic [ref=f3e508]:
+            - generic [ref=f3e509]:
+              - paragraph [ref=f3e510]: Entreprise Test Indebel
+              - img "Vérifié" [ref=f3e511]
+            - generic [ref=f3e512]: Entreprise • Gratuit
+      - link "Mettre à niveau votre forfait" [ref=f3e514] [cursor=pointer]:
+        - /url: /employer/forfaits
+  - generic [ref=f3e515]:
+    - generic [ref=f3e516]:
+      - generic [ref=f3e517]:
+        - button "Basculer la navigation" [ref=f3e518] [cursor=pointer]
+        - generic [ref=f3e522]:
+          - paragraph [ref=f3e523]: Recruteur
+          - heading "Profile" [level=1] [ref=f3e524]
+      - textbox "Recherche" [ref=f3e530]
+      - generic [ref=f3e531]:
+        - button "Tickets support" [ref=f3e533] [cursor=pointer]
+        - button "Notifications" [ref=f3e537] [cursor=pointer]
+        - button "T" [ref=f3e542] [cursor=pointer]
+    - generic [ref=f3e545]:
+      - generic [ref=f3e547]:
+        - paragraph [ref=f3e553]: Ajoutez une image de couverture
+        - button "Modifier la couverture" [ref=f3e554] [cursor=pointer]
+      - generic [ref=f3e559]:
+        - generic [ref=f3e560]:
+          - generic [ref=f3e562]:
+            - generic [ref=f3e563]:
+              - generic [ref=f3e564]: ET
+              - button "Changer la photo de profil" [ref=f3e566] [cursor=pointer]
+            - generic [ref=f3e570]:
+              - generic [ref=f3e571]:
+                - heading "Entreprise Test Indebel" [level=2] [ref=f3e572]
+                - img "Vérifié" [ref=f3e574]
+              - generic [ref=f3e575]: Forfait Gratuit
+            - generic [ref=f3e576]: Recruteur
+            - paragraph [ref=f3e578]: recruteur.test@indebel.local
+          - generic [ref=f3e579]:
+            - heading "Informations du compte" [level=3] [ref=f3e580]
+            - generic [ref=f3e581]:
+              - generic [ref=f3e582]: Membre depuis 29 juillet 2026
+              - generic [ref=f3e586]: Recruteur
+              - generic [ref=f3e591]: Email vérifié
+        - generic [ref=f3e596]:
+          - generic [ref=f3e597]:
+            - heading "Informations personnelles" [level=3] [ref=f3e599]
+            - generic [ref=f3e600]:
+              - paragraph [ref=f3e604]: Gérez vos informations personnelles, votre mot de passe et vos préférences dans les paramètres.
+              - button "Accéder aux paramètres" [ref=f3e605] [cursor=pointer]
+          - generic [ref=f3e606]:
+            - generic [ref=f3e607]:
+              - heading "Informations Professionnelles" [level=3] [ref=f3e608]
+              - button "Modifier" [ref=f3e609] [cursor=pointer]
+            - generic [ref=f3e610]:
+              - generic [ref=f3e611]:
+                - generic [ref=f3e612]: Numéro BCE
+                - paragraph [ref=f3e617]: Non renseigné
+              - generic [ref=f3e618]:
+                - generic [ref=f3e619]: Adresse
+                - paragraph [ref=f3e624]: Non renseignée
+              - generic [ref=f3e625]:
+                - generic [ref=f3e626]: Secteur d'activité
+                - paragraph [ref=f3e630]: Non renseigné
+              - generic [ref=f3e631]:
+                - generic [ref=f3e632]: Langues parlées
+                - generic [ref=f3e637]: Français
+              - paragraph [ref=f3e641]:
+                - strong [ref=f3e642]: "Logo :"
+                - text: L'image de profil que vous avez définie sera utilisée comme logo de votre entreprise.
+              - button "Voir mon profil public" [ref=f3e644] [cursor=pointer]
+          - generic [ref=f3e648]:
+            - heading "Conseils pour les Recruteurs" [level=3] [ref=f3e649]
+            - list [ref=f3e650]:
+              - listitem [ref=f3e651]: • Créez des descriptions d'offres détaillées et attractives
+              - listitem [ref=f3e652]: • Répondez rapidement aux candidatures reçues
+              - listitem [ref=f3e653]: • Maintenez vos offres à jour

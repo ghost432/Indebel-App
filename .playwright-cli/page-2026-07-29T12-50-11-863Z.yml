@@ -1,0 +1,27 @@
+- generic [ref=f4e3]:
+  - status [ref=f4e417]: Déconnexion réussie
+  - generic [ref=f4e420]:
+    - generic [ref=f4e421]:
+      - img "Indebel Logo" [ref=f4e423]
+      - heading "Connexion à Indebel" [level=2] [ref=f4e424]
+      - paragraph [ref=f4e425]:
+        - text: Pas encore de compte ?
+        - link "Créer un compte" [ref=f4e426] [cursor=pointer]:
+          - /url: /account-type
+    - generic [ref=f4e427]:
+      - generic [ref=f4e428]:
+        - generic [ref=f4e429]:
+          - generic [ref=f4e430]: Email
+          - textbox "vous@exemple.com" [ref=f4e432]
+        - generic [ref=f4e433]:
+          - generic [ref=f4e434]: Mot de passe
+          - generic [ref=f4e435]:
+            - textbox "••••••••" [ref=f4e436]
+            - button [ref=f4e437] [cursor=pointer]
+      - generic [ref=f4e441]:
+        - generic [ref=f4e442]:
+          - checkbox "Se souvenir de moi" [ref=f4e443]
+          - generic [ref=f4e444]: Se souvenir de moi
+        - link "Mot de passe oublié ?" [ref=f4e446] [cursor=pointer]:
+          - /url: /forgot-password
+      - button "Se connecter" [ref=f4e447] [cursor=pointer]

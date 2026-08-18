@@ -1,0 +1,141 @@
+- generic [ref=e3]:
+  - img "Chargement..." [ref=e6]
+  - navigation [ref=e9]:
+    - generic [ref=e11]:
+      - link "Aller sur indebel.be":
+        - /url: https://indebel.be
+        - img "Indebel"
+  - main [ref=e13]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Devis gratuit
+        - heading "Décrivez votre projet, recevez des devis qualifiés" [level=1] [ref=e21]
+        - paragraph [ref=e22]: Une demande claire, validée par Indebel, puis transmise aux prestataires disponibles dans votre région.
+      - generic [ref=e23]:
+        - generic [ref=e24]: Demande vérifiée
+        - generic [ref=e30]: Publication contrôlée
+        - generic [ref=e36]: Réponses comparables
+    - generic [ref=e42]:
+      - complementary [ref=e43]:
+        - paragraph [ref=e44]: Étapes
+        - generic [ref=e45]:
+          - generic [ref=e51]:
+            - paragraph [ref=e52]: Projet
+            - paragraph [ref=e53]: Travaux, catégorie et détails.
+          - generic [ref=e59]:
+            - paragraph [ref=e60]: Localisation
+            - paragraph [ref=e61]: Adresse et région d'intervention.
+          - generic [ref=e67]:
+            - paragraph [ref=e68]: Coordonnées
+            - paragraph [ref=e69]: Contact pour recevoir les devis.
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - heading "Détails du projet" [level=2] [ref=e77]
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - generic [ref=e80]: Type de travaux *
+              - textbox "Type de travaux *" [ref=e81]:
+                - /placeholder: "Ex: rénovation salle de bain"
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - generic [ref=e84]: Secteur
+                - combobox "Secteur" [ref=e85]:
+                  - option "Sélectionnez un secteur" [selected]
+                  - option "Rénovation & Construction"
+                  - option "Transport & Logistique"
+                  - option "Nettoyage & Multiservices"
+                  - option "Électricité"
+                  - option "Plomberie"
+                  - option "Peinture"
+                  - option "Jardinage & Espaces verts"
+                  - option "Déménagement"
+                  - option "Autre"
+              - generic [ref=e86]:
+                - generic [ref=e87]: Priorité
+                - combobox "Priorité" [ref=e88]:
+                  - option "Normale" [selected]
+                  - option "Urgente"
+            - generic [ref=e89]:
+              - generic [ref=e90]: Description du projet *
+              - textbox "Description du projet *" [ref=e91]:
+                - /placeholder: Décrivez vos besoins, vos contraintes et le résultat attendu.
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]: Date de début souhaitée
+                - textbox "Date de début souhaitée" [ref=e96]
+              - generic [ref=e97]:
+                - generic [ref=e98]: Détails complémentaires
+                - textbox "Détails complémentaires" [ref=e99]:
+                  - /placeholder: Surface, étage, accès...
+            - generic [ref=e100]:
+              - generic [ref=e101]: Photos du projet (max 5)
+              - button "Photos du projet (max 5)" [ref=e102] [cursor=pointer]:
+                - generic [ref=e106]: Ajouter des images
+                - generic [ref=e107]: PNG ou JPG, 5 fichiers maximum
+        - generic [ref=e108]:
+          - heading "Localisation" [level=2] [ref=e114]
+          - generic [ref=e115]:
+            - generic [ref=e116]:
+              - generic [ref=e117]: Adresse *
+              - textbox "Adresse *" [ref=e119]:
+                - /placeholder: Rue, numéro
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e122]: Code postal *
+                - textbox "Code postal *" [ref=e123]:
+                  - /placeholder: "1000"
+              - generic [ref=e124]:
+                - generic [ref=e125]: Région *
+                - combobox "Région *" [ref=e126]:
+                  - option "Région" [selected]
+                  - option "Bruxelles-Capitale"
+                  - option "Flandre orientale"
+                  - option "Flandre occidentale"
+                  - option "Anvers"
+                  - option "Limbourg"
+                  - option "Brabant flamand"
+                  - option "Brabant wallon"
+                  - option "Hainaut"
+                  - option "Liège"
+                  - option "Luxembourg"
+                  - option "Namur"
+              - generic [ref=e127]:
+                - generic [ref=e128]: Ville/Commune *
+                - textbox "Ville/Commune *" [ref=e129]:
+                  - /placeholder: Bruxelles
+            - generic [ref=e130]:
+              - generic [ref=e131]: Lieu des travaux
+              - generic [ref=e132]:
+                - generic [ref=e133] [cursor=pointer]:
+                  - radio "Lieu des travaux Même adresse Autre adresse" [checked] [ref=e134]
+                  - text: Même adresse
+                - generic [ref=e135] [cursor=pointer]:
+                  - radio "Autre adresse" [ref=e136]
+                  - text: Autre adresse
+        - generic [ref=e137]:
+          - heading "Vos coordonnées" [level=2] [ref=e143]
+          - generic [ref=e144]:
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - generic [ref=e147]: Prénom *
+                - textbox "Prénom *" [ref=e148]:
+                  - /placeholder: Prénom
+              - generic [ref=e149]:
+                - generic [ref=e150]: Nom *
+                - textbox "Nom *" [ref=e151]:
+                  - /placeholder: Nom
+            - generic [ref=e152]:
+              - generic [ref=e153]:
+                - generic [ref=e154]: Email *
+                - textbox "Email *" [ref=e155]:
+                  - /placeholder: votre@email.com
+              - generic [ref=e156]:
+                - generic [ref=e157]: Téléphone *
+                - textbox "Téléphone *" [ref=e158]:
+                  - /placeholder: +32 123 45 67 89
+            - button "Envoyer ma demande de devis" [ref=e159] [cursor=pointer]
+            - paragraph [ref=e163]:
+              - text: En soumettant ce formulaire, vous acceptez les
+              - link "conditions d'utilisation et politique de confidentialité" [ref=e164] [cursor=pointer]:
+                - /url: https://indebel.be/cgu-particuliers
+              - text: ", et d'être contacté par des professionnels."

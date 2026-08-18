@@ -1,0 +1,14 @@
+- generic [ref=e3]:
+  - img "Chargement..." [ref=e6]
+  - navigation [ref=e9]:
+    - generic [ref=e11]:
+      - link "Aller sur indebel.be" [ref=e12] [cursor=pointer]:
+        - /url: https://indebel.be
+        - img "Indebel" [ref=e13]
+      - generic [ref=e15]:
+        - link "Accueil" [ref=e16] [cursor=pointer]:
+          - /url: https://indebel.be
+        - link "Devis" [ref=e23] [cursor=pointer]:
+          - /url: /devis
+        - link "Mission" [ref=e28] [cursor=pointer]:
+          - /url: /missions

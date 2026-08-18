@@ -1,0 +1,48 @@
+- generic [ref=e3]:
+  - img "Chargement..." [ref=e6]
+  - navigation [ref=e9]:
+    - generic [ref=e11]:
+      - link "Aller sur indebel.be" [ref=e12] [cursor=pointer]:
+        - /url: https://indebel.be
+        - img "Indebel" [ref=e13]
+      - generic [ref=e15]:
+        - link "Accueil" [ref=e16] [cursor=pointer]:
+          - /url: https://indebel.be
+        - link "Devis" [ref=e23] [cursor=pointer]:
+          - /url: /devis
+        - link "Mission" [ref=e28] [cursor=pointer]:
+          - /url: /missions
+  - main [ref=e33]:
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: Opportunités publiques
+          - heading "Missions disponibles" [level=1] [ref=e43]
+          - paragraph [ref=e44]: Parcourez les missions publiées sur Indebel. Les prestataires connectés gardent les mêmes quotas de visualisation et de candidature IA.
+        - link "Devenir prestataire" [ref=e45] [cursor=pointer]:
+          - /url: /register-freelancer
+      - generic [ref=e48]:
+        - article [ref=e49]:
+          - paragraph [ref=e53]: Missions ouvertes
+          - paragraph [ref=e54]: "0"
+        - article [ref=e55]:
+          - paragraph [ref=e61]: Types
+          - paragraph [ref=e62]: Horaire & fixe
+        - article [ref=e63]:
+          - paragraph [ref=e66]: Tri
+          - paragraph [ref=e67]: Urgentes d'abord
+    - generic [ref=e68]:
+      - generic [ref=e69]:
+        - textbox "Rechercher une mission" [ref=e71]
+        - combobox [ref=e73]:
+          - option "Tous les types" [selected]
+          - option "Forfait horaire"
+          - option "Forfait fixe"
+        - combobox [ref=e75]:
+          - option "Plus récentes" [selected]
+          - option "Plus anciennes"
+          - option "Titre A-Z"
+          - option "Titre Z-A"
+          - option "Budget décroissant"
+          - option "Budget croissant"
+      - paragraph [ref=e76]: 0 mission disponible

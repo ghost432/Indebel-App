@@ -1,0 +1,195 @@
+- generic [ref=f3e3]:
+  - navigation [ref=f3e9]:
+    - generic [ref=f3e11]:
+      - link "Aller sur indebel.be" [ref=f3e12] [cursor=pointer]:
+        - /url: https://indebel.be
+        - img "Indebel" [ref=f3e13]
+      - generic [ref=f3e15]:
+        - link "Tableau de bord" [ref=f3e401] [cursor=pointer]:
+          - /url: /employer/dashboard
+        - link "Devis" [ref=f3e408] [cursor=pointer]:
+          - /url: /devis
+        - link "Mission" [ref=f3e413] [cursor=pointer]:
+          - /url: /missions
+      - generic [ref=f3e52]:
+        - button "Ouvrir le menu du profil" [expanded] [active] [ref=f3e53] [cursor=pointer]:
+          - generic [ref=f3e54]: ET
+          - generic [ref=f3e60]:
+            - generic [ref=f3e61]: Entreprise Test Indebel
+            - generic [ref=f3e62]: Recruteur
+        - generic [ref=f3e418]:
+          - button "Mon profil" [ref=f3e419] [cursor=pointer]
+          - button "Déconnexion" [ref=f3e424] [cursor=pointer]
+  - main [ref=f3e63]:
+    - generic [ref=f3e66]:
+      - generic [ref=f3e67]:
+        - generic [ref=f3e68]:
+          - generic [ref=f3e69]: Opportunités publiques
+          - heading "Devis disponibles" [level=1] [ref=f3e73]
+          - paragraph [ref=f3e74]: Consultez les demandes validées par Indebel. Les informations sensibles restent protégées jusqu'à la connexion.
+        - link "Demander un devis" [ref=f3e75] [cursor=pointer]:
+          - /url: /demande-devis
+      - generic [ref=f3e78]:
+        - article [ref=f3e79]:
+          - paragraph [ref=f3e83]: Demandes publiées
+          - paragraph [ref=f3e84]: "16"
+        - article [ref=f3e85]:
+          - paragraph [ref=f3e91]: Maximum par demande
+          - paragraph [ref=f3e92]: 5 devis
+        - article [ref=f3e93]:
+          - paragraph [ref=f3e96]: Mises à jour
+          - paragraph [ref=f3e97]: Récentes
+    - generic [ref=f3e98]:
+      - generic [ref=f3e99]:
+        - textbox "Rechercher par ville, catégorie ou travaux" [ref=f3e101]
+        - button "Actualiser" [ref=f3e102] [cursor=pointer]
+      - generic [ref=f3e108]:
+        - article [ref=f3e109]:
+          - generic [ref=f3e111]:
+            - generic [ref=f3e112]:
+              - paragraph [ref=f3e114]: Plomberie & Sanitaire
+              - heading "Rénovation complète salle de bain" [level=3] [ref=f3e115]
+              - generic [ref=f3e116]:
+                - generic [ref=f3e117]: Ixelles
+                - generic [ref=f3e121]: 29 juil. 2026
+                - generic [ref=f3e124]: 1/5 devis
+            - generic [ref=f3e130]:
+              - generic [ref=f3e131]:
+                - paragraph [ref=f3e132]: 4 500 €
+                - paragraph [ref=f3e133]: Budget estimé
+              - generic [ref=f3e134]: Urgent
+          - paragraph [ref=f3e138]: Nous souhaitons refaire entièrement notre salle de bain de 10m2. Dépose de l'ancienne baignoire, installation d'une douche à l'italienne, pose de nouveau carrelage mural et au sol, et remplacement du meuble double vasque.
+          - button "Voir le détail" [ref=f3e140] [cursor=pointer]
+        - article [ref=f3e141]:
+          - generic [ref=f3e143]:
+            - generic [ref=f3e144]:
+              - generic [ref=f3e145]:
+                - paragraph [ref=f3e146]: Électricité
+                - generic [ref=f3e147]: Traité
+              - heading "Test popup quota - installation luminaire" [level=3] [ref=f3e148]
+              - generic [ref=f3e149]:
+                - generic [ref=f3e150]: Bruxelles
+                - generic [ref=f3e154]: 09 août 2026
+                - generic [ref=f3e157]: 0/5 devis
+            - generic [ref=f3e163]:
+              - generic [ref=f3e164]:
+                - paragraph [ref=f3e165]: 180 €
+                - paragraph [ref=f3e166]: Budget estimé
+              - generic [ref=f3e167]: Urgent
+          - paragraph [ref=f3e171]: Deuxième demande de test créée par Codex pour vérifier que le popup de quota apparaît quand le prestataire a déjà 9 vues détail.
+          - button "Voir le détail" [ref=f3e173] [cursor=pointer]
+        - article [ref=f3e174]:
+          - generic [ref=f3e176]:
+            - generic [ref=f3e177]:
+              - paragraph [ref=f3e179]: Rénovation & Construction
+              - heading "sonnerie appartement en panne" [level=3] [ref=f3e180]
+              - generic [ref=f3e181]:
+                - generic [ref=f3e182]: Sint-Genesius-Rode
+                - generic [ref=f3e186]: 14 juil. 2026
+                - generic [ref=f3e189]: 0/5 devis
+            - generic [ref=f3e195]:
+              - generic [ref=f3e196]:
+                - paragraph [ref=f3e197]: Non précisé
+                - paragraph [ref=f3e198]: Budget estimé
+              - generic [ref=f3e199]: Urgent
+          - paragraph [ref=f3e203]: La sonnerie de mon appartement ne marche plus. Besoins d'un petit dépannage.
+          - button "Voir le détail" [ref=f3e205] [cursor=pointer]
+        - article [ref=f3e206]:
+          - generic [ref=f3e208]:
+            - generic [ref=f3e209]:
+              - paragraph [ref=f3e211]: Rénovation & Construction
+              - heading "Carrelage sol et mur" [level=3] [ref=f3e212]
+              - generic [ref=f3e213]:
+                - generic [ref=f3e214]: Genk
+                - generic [ref=f3e218]: 12 juil. 2026
+                - generic [ref=f3e221]: 0/5 devis
+            - generic [ref=f3e227]:
+              - generic [ref=f3e228]:
+                - paragraph [ref=f3e229]: Non précisé
+                - paragraph [ref=f3e230]: Budget estimé
+              - generic [ref=f3e231]: Urgent
+          - paragraph [ref=f3e235]: Carrelage sol et mur
+          - button "Voir le détail" [ref=f3e237] [cursor=pointer]
+        - article [ref=f3e238]:
+          - generic [ref=f3e240]:
+            - generic [ref=f3e241]:
+              - paragraph [ref=f3e243]: Rénovation & Construction
+              - heading "Réparation portail en métal" [level=3] [ref=f3e244]
+              - generic [ref=f3e245]:
+                - generic [ref=f3e246]: Genappe
+                - generic [ref=f3e250]: 10 juil. 2026
+                - generic [ref=f3e253]: 0/5 devis
+            - generic [ref=f3e259]:
+              - generic [ref=f3e260]:
+                - paragraph [ref=f3e261]: Non précisé
+                - paragraph [ref=f3e262]: Budget estimé
+              - generic [ref=f3e263]: Urgent
+          - paragraph [ref=f3e267]: Bonjour, je cherche un professionel capable de réparer des charnières d un portail en métal soudé, de même que réparer le système d ouverture NICE d un portail existant, donc les moteurs fonctionnent, l électronique fonctionne (il s ouvre de manière épisodique) mais dont sans doute un ou plusieurs capteurs sont défectueux.
+          - button "Voir le détail" [ref=f3e269] [cursor=pointer]
+        - article [ref=f3e270]:
+          - generic [ref=f3e272]:
+            - generic [ref=f3e273]:
+              - paragraph [ref=f3e275]: Rénovation & Construction
+              - heading "Reparations" [level=3] [ref=f3e276]
+              - generic [ref=f3e277]:
+                - generic [ref=f3e278]: Vilvoorde
+                - generic [ref=f3e282]: 05 juil. 2026
+                - generic [ref=f3e285]: 0/5 devis
+            - generic [ref=f3e291]:
+              - generic [ref=f3e292]:
+                - paragraph [ref=f3e293]: Non précisé
+                - paragraph [ref=f3e294]: Budget estimé
+              - generic [ref=f3e295]: Urgent
+          - paragraph [ref=f3e299]: Bonjour nous avons besoin d un menuisier pour avoir son avis au sujet de notre veranda exterieure qui pourri svp? Merci beaucoup
+          - button "Voir le détail" [ref=f3e301] [cursor=pointer]
+        - article [ref=f3e302]:
+          - generic [ref=f3e304]:
+            - generic [ref=f3e305]:
+              - paragraph [ref=f3e307]: Rénovation & Construction
+              - heading "Menuiserie" [level=3] [ref=f3e308]
+              - generic [ref=f3e309]:
+                - generic [ref=f3e310]: Ottignies-Louvain-la-Neuve
+                - generic [ref=f3e314]: 20 juil. 2026
+                - generic [ref=f3e317]: 0/5 devis
+            - generic [ref=f3e323]:
+              - generic [ref=f3e324]:
+                - paragraph [ref=f3e325]: Non précisé
+                - paragraph [ref=f3e326]: Budget estimé
+              - generic [ref=f3e327]: Urgent
+          - paragraph [ref=f3e331]: Remplacement d'un chambranle de porte intérieur
+          - button "Voir le détail" [ref=f3e333] [cursor=pointer]
+        - article [ref=f3e334]:
+          - generic [ref=f3e336]:
+            - generic [ref=f3e337]:
+              - paragraph [ref=f3e339]: Rénovation & Construction
+              - heading "Pose d'auvent sur ma terrasse" [level=3] [ref=f3e340]
+              - generic [ref=f3e341]:
+                - generic [ref=f3e342]: Seraing
+                - generic [ref=f3e346]: 13 juil. 2026
+                - generic [ref=f3e349]: 0/5 devis
+            - generic [ref=f3e355]:
+              - generic [ref=f3e356]:
+                - paragraph [ref=f3e357]: Non précisé
+                - paragraph [ref=f3e358]: Budget estimé
+              - generic [ref=f3e359]: Urgent
+          - paragraph [ref=f3e363]: Bonjour, Nous venons d'acheter 2 auvents pour notre terrasse et nous aimerions avoir de l'aide pour leur pose. Merci de vos réponses
+          - button "Voir le détail" [ref=f3e365] [cursor=pointer]
+        - article [ref=f3e366]:
+          - generic [ref=f3e368]:
+            - generic [ref=f3e369]:
+              - paragraph [ref=f3e371]: Rénovation & Construction
+              - heading "Création sortie hotte de cuisine sur toiture plate" [level=3] [ref=f3e372]
+              - generic [ref=f3e373]:
+                - generic [ref=f3e374]: Quaregnon
+                - generic [ref=f3e378]: 29 juin 2026
+                - generic [ref=f3e381]: 1/5 devis
+            - generic [ref=f3e387]:
+              - generic [ref=f3e388]:
+                - paragraph [ref=f3e389]: Non précisé
+                - paragraph [ref=f3e390]: Budget estimé
+              - generic [ref=f3e391]: Urgent
+          - paragraph [ref=f3e395]: Création d’une sortie de hotte de cuisine sur toiture plate. Carottage à faire
+          - button "Voir le détail" [ref=f3e397] [cursor=pointer]
+      - generic [ref=f3e398]:
+        - button "1" [ref=f3e399] [cursor=pointer]
+        - button "2" [ref=f3e400] [cursor=pointer]

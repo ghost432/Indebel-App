@@ -1,0 +1,1 @@
+// auth-debug.js - placeholder

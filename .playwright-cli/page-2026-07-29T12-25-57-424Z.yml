@@ -1,0 +1,388 @@
+- generic [ref=e3]:
+  - navigation [ref=e9]:
+    - link "Aller sur indebel.be" [ref=e12] [cursor=pointer]:
+      - /url: https://indebel.be
+      - img "Indebel" [ref=e13]
+  - main [ref=e15]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]: Devis gratuit
+        - heading "Décrivez votre projet, recevez des devis qualifiés" [level=1] [ref=e23]
+        - paragraph [ref=e24]: Une demande claire, validée par Indebel, puis transmise aux prestataires disponibles dans votre région.
+      - generic [ref=e25]:
+        - generic [ref=e26]: Demande vérifiée
+        - generic [ref=e32]: Publication contrôlée
+        - generic [ref=e38]: Réponses comparables
+    - generic [ref=e44]:
+      - complementary [ref=e45]:
+        - paragraph [ref=e46]: Étapes
+        - generic [ref=e47]:
+          - generic [ref=e53]:
+            - paragraph [ref=e54]: Projet
+            - paragraph [ref=e55]: Travaux, secteur et détails.
+          - generic [ref=e61]:
+            - paragraph [ref=e62]: Lieu des travaux
+            - paragraph [ref=e63]: Adresse, région et commune.
+          - generic [ref=e69]:
+            - paragraph [ref=e70]: Coordonnées
+            - paragraph [ref=e71]: Contact pour recevoir les devis.
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - heading "Détails du projet" [level=2] [ref=e79]
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: Type de travaux *
+              - textbox "Type de travaux *" [ref=e83]:
+                - /placeholder: "Ex: rénovation salle de bain"
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e86]: Secteur
+                - combobox "Secteur" [ref=e87]:
+                  - option "Sélectionnez un secteur" [selected]
+                  - option "Rénovation & Construction"
+                  - option "Transport & Logistique"
+                  - option "Nettoyage"
+              - generic [ref=e88]:
+                - generic [ref=e89]: Priorité
+                - combobox "Priorité" [ref=e90]:
+                  - option "Normale" [selected]
+                  - option "Urgente"
+            - generic [ref=e91]:
+              - generic [ref=e92]: Description du projet *
+              - textbox "Description du projet *" [ref=e93]:
+                - /placeholder: Décrivez vos besoins, vos contraintes et le résultat attendu.
+            - generic [ref=e94]:
+              - generic [ref=e95]:
+                - generic [ref=e96]: Date de début souhaitée
+                - textbox "Date de début souhaitée" [ref=e98]
+              - generic [ref=e99]:
+                - generic [ref=e100]: Détails complémentaires
+                - textbox "Détails complémentaires" [ref=e101]:
+                  - /placeholder: Surface, étage, accès...
+            - generic [ref=e102]:
+              - generic [ref=e103]: Photos du projet (optionnel, max 5)
+              - button "Photos du projet (optionnel, max 5)" [ref=e104] [cursor=pointer]:
+                - generic [ref=e108]: Ajouter des images optionnelles
+                - generic [ref=e109]: PNG ou JPG, 5 fichiers maximum
+        - generic [ref=e110]:
+          - heading "Lieu des travaux" [level=2] [ref=e116]
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - generic [ref=e119]: Adresse *
+              - textbox "Adresse *" [ref=e121]:
+                - /placeholder: Rue, numéro
+            - generic [ref=e122]:
+              - generic [ref=e123]:
+                - generic [ref=e124]: Code postal *
+                - textbox "Code postal *" [ref=e125]:
+                  - /placeholder: "1000"
+              - generic [ref=e126]:
+                - generic [ref=e127]: Région *
+                - combobox "Région *" [ref=e128]:
+                  - option "Région"
+                  - option "Région de Bruxelles-Capitale"
+                  - option "Région Wallonne" [selected]
+                  - option "Région Flamande"
+              - generic [ref=e160]:
+                - generic [ref=e161]: Province *
+                - combobox "Province *" [ref=e162]:
+                  - option "Province" [selected]
+                  - option "Province du Brabant wallon"
+                  - option "Province de Hainaut"
+                  - option "Province de Liège"
+                  - option "Province de Luxembourg"
+                  - option "Province de Namur"
+              - generic [ref=e129]:
+                - generic [ref=e130]: Ville/Commune *
+                - combobox "Ville/Commune *" [disabled] [ref=e131]:
+                  - option "Choisissez d’abord une province" [selected]
+                  - option "Aiseau-Presles"
+                  - option "Amay"
+                  - option "Amblève"
+                  - option "Andenne"
+                  - option "Anderlues"
+                  - option "Anhée"
+                  - option "Ans"
+                  - option "Anthisnes"
+                  - option "Antoing"
+                  - option "Arlon"
+                  - option "Assesse"
+                  - option "Ath"
+                  - option "Attert"
+                  - option "Aubange"
+                  - option "Aubel"
+                  - option "Awans"
+                  - option "Aywaille"
+                  - option "Baelen"
+                  - option "Bassenge"
+                  - option "Bastogne"
+                  - option "Beaumont"
+                  - option "Beauraing"
+                  - option "Beauvechain"
+                  - option "Beloeil"
+                  - option "Berloz"
+                  - option "Bernissart"
+                  - option "Bertogne"
+                  - option "Bertrix"
+                  - option "Beyne-Heusay"
+                  - option "Bièvre"
+                  - option "Binche"
+                  - option "Blégny"
+                  - option "Bouillon"
+                  - option "Boussu"
+                  - option "Braine-l'Alleud"
+                  - option "Braine-le-Château"
+                  - option "Braine-le-Comte"
+                  - option "Braives"
+                  - option "Brugelette"
+                  - option "Brunehaut"
+                  - option "Bullange"
+                  - option "Burdinne"
+                  - option "Burg-Reuland"
+                  - option "Butgenbach"
+                  - option "Celles"
+                  - option "Cerfontaine"
+                  - option "Chapelle-lez-Herlaimont"
+                  - option "Charleroi"
+                  - option "Chastre"
+                  - option "Châtelet"
+                  - option "Chaudfontaine"
+                  - option "Chaumont-Gistoux"
+                  - option "Chièvres"
+                  - option "Chimay"
+                  - option "Chiny"
+                  - option "Ciney"
+                  - option "Clavier"
+                  - option "Colfontaine"
+                  - option "Comblain-au-Pont"
+                  - option "Comines-Warneton"
+                  - option "Courcelles"
+                  - option "Court-Saint-Etienne"
+                  - option "Couvin"
+                  - option "Crisnée"
+                  - option "Dalhem"
+                  - option "Daverdisse"
+                  - option "Dinant"
+                  - option "Dison"
+                  - option "Doische"
+                  - option "Donceel"
+                  - option "Dour"
+                  - option "Durbuy"
+                  - option "Ecaussinnes"
+                  - option "Eghezée"
+                  - option "Ellezelles"
+                  - option "Enghien"
+                  - option "Engis"
+                  - option "Erezée"
+                  - option "Erquelinnes"
+                  - option "Esneux"
+                  - option "Estaimpuis"
+                  - option "Estinnes"
+                  - option "Etalle"
+                  - option "Eupen"
+                  - option "Faimes"
+                  - option "Farciennes"
+                  - option "Fauvillers"
+                  - option "Fernelmont"
+                  - option "Ferrières"
+                  - option "Fexhe-le-Haut-Clocher"
+                  - option "Flémalle"
+                  - option "Fléron"
+                  - option "Fleurus"
+                  - option "Flobecq"
+                  - option "Floreffe"
+                  - option "Florennes"
+                  - option "Florenville"
+                  - option "Fontaine-l'Evêque"
+                  - option "Fosses-la-Ville"
+                  - option "Frameries"
+                  - option "Frasnes-lez-Anvaing"
+                  - option "Froidchapelle"
+                  - option "Gedinne"
+                  - option "Geer"
+                  - option "Gembloux"
+                  - option "Genappe"
+                  - option "Gerpinnes"
+                  - option "Gesves"
+                  - option "Gouvy"
+                  - option "Grâce-Hollogne"
+                  - option "Grez-Doiceau"
+                  - option "Habay"
+                  - option "Ham-sur-Heure-Nalinnes"
+                  - option "Hamoir"
+                  - option "Hamois"
+                  - option "Hannut"
+                  - option "Hastière"
+                  - option "Havelange"
+                  - option "Hélécine"
+                  - option "Hensies"
+                  - option "Herbeumont"
+                  - option "Héron"
+                  - option "Herstal"
+                  - option "Herve"
+                  - option "Honnelles"
+                  - option "Hotton"
+                  - option "Houffalize"
+                  - option "Houyet"
+                  - option "Huy"
+                  - option "Incourt"
+                  - option "Ittre"
+                  - option "Jalhay"
+                  - option "Jemeppe-sur-Sambre"
+                  - option "Jodoigne"
+                  - option "Juprelle"
+                  - option "Jurbise"
+                  - option "La Bruyère"
+                  - option "La Calamine"
+                  - option "La Hulpe"
+                  - option "La Louvière"
+                  - option "La Roche-en-Ardenne"
+                  - option "Lasne"
+                  - option "Le Roeulx"
+                  - option "Léglise"
+                  - option "Lens"
+                  - option "Les Bons Villers"
+                  - option "Lessines"
+                  - option "Leuze-en-Hainaut"
+                  - option "Libin"
+                  - option "Libramont-Chevigny"
+                  - option "Liège"
+                  - option "Lierneux"
+                  - option "Limbourg"
+                  - option "Lincent"
+                  - option "Lobbes"
+                  - option "Lontzen"
+                  - option "Malmedy"
+                  - option "Manage"
+                  - option "Manhay"
+                  - option "Marche-en-Famenne"
+                  - option "Marchin"
+                  - option "Martelange"
+                  - option "Meix-devant-Virton"
+                  - option "Merbes-le-Château"
+                  - option "Messancy"
+                  - option "Messines"
+                  - option "Mettet"
+                  - option "Modave"
+                  - option "Momignies"
+                  - option "Mons"
+                  - option "Mont-de-l'Enclus"
+                  - option "Mont-Saint-Guibert"
+                  - option "Montigny-le-Tilleul"
+                  - option "Morlanwelz"
+                  - option "Mouscron"
+                  - option "Musson"
+                  - option "Namur"
+                  - option "Nandrin"
+                  - option "Nassogne"
+                  - option "Neufchâteau"
+                  - option "Neupré"
+                  - option "Nivelles"
+                  - option "Ohey"
+                  - option "Olne"
+                  - option "Onhaye"
+                  - option "Oreye"
+                  - option "Orp-Jauche"
+                  - option "Ottignies-Louvain-la-Neuve"
+                  - option "Ouffet"
+                  - option "Oupeye"
+                  - option "Paliseul"
+                  - option "Pecq"
+                  - option "Pepinster"
+                  - option "Péruwelz"
+                  - option "Perwez"
+                  - option "Philippeville"
+                  - option "Plombières"
+                  - option "Pont-à-celles"
+                  - option "Profondeville"
+                  - option "Quaregnon"
+                  - option "Quévy"
+                  - option "Quiévrain"
+                  - option "Raeren"
+                  - option "Ramillies"
+                  - option "Rebecq"
+                  - option "Remicourt"
+                  - option "Rendeux"
+                  - option "Rixensart"
+                  - option "Rochefort"
+                  - option "Rouvroy"
+                  - option "Rumes"
+                  - option "Saint-Georges-sur-Meuse"
+                  - option "Saint-Ghislain"
+                  - option "Saint-Hubert"
+                  - option "Saint-Léger"
+                  - option "Saint-Nicolas"
+                  - option "Saint-Vith"
+                  - option "Sainte-Ode"
+                  - option "Sambreville"
+                  - option "Seneffe"
+                  - option "Seraing"
+                  - option "Silly"
+                  - option "Sivry-Rance"
+                  - option "Soignies"
+                  - option "Sombreffe"
+                  - option "Somme-Leuze"
+                  - option "Soumagne"
+                  - option "Spa"
+                  - option "Sprimont"
+                  - option "Stavelot"
+                  - option "Stoumont"
+                  - option "Tellin"
+                  - option "Tenneville"
+                  - option "Theux"
+                  - option "Thimister-Clermont"
+                  - option "Thuin"
+                  - option "Tinlot"
+                  - option "Tintigny"
+                  - option "Tournai"
+                  - option "Trois-Ponts"
+                  - option "Trooz"
+                  - option "Tubize"
+                  - option "Vaux-sur-Sûre"
+                  - option "Verlaine"
+                  - option "Verviers"
+                  - option "Vielsalm"
+                  - option "Villers-la-Ville"
+                  - option "Villers-le-Bouillet"
+                  - option "Viroinval"
+                  - option "Virton"
+                  - option "Visé"
+                  - option "Vresse-sur-Semois"
+                  - option "Waimes"
+                  - option "Walcourt"
+                  - option "Walhain"
+                  - option "Wanze"
+                  - option "Waremme"
+                  - option "Wasseiges"
+                  - option "Waterloo"
+                  - option "Wavre"
+                  - option "Welkenraedt"
+                  - option "Wellin"
+                  - option "Yvoir"
+        - generic [ref=e132]:
+          - heading "Vos coordonnées" [level=2] [ref=e138]
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - generic [ref=e141]:
+                - generic [ref=e142]: Prénom *
+                - textbox "Prénom *" [ref=e143]:
+                  - /placeholder: Prénom
+              - generic [ref=e144]:
+                - generic [ref=e145]: Nom *
+                - textbox "Nom *" [ref=e146]:
+                  - /placeholder: Nom
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - generic [ref=e149]: Email *
+                - textbox "Email *" [ref=e150]:
+                  - /placeholder: votre@email.com
+              - generic [ref=e151]:
+                - generic [ref=e152]: Téléphone *
+                - textbox "Téléphone *" [ref=e153]:
+                  - /placeholder: +32 123 45 67 89
+            - button "Envoyer ma demande de devis" [ref=e154] [cursor=pointer]
+            - paragraph [ref=e158]:
+              - text: En soumettant ce formulaire, vous acceptez les
+              - link "conditions d'utilisation et politique de confidentialité" [ref=e159] [cursor=pointer]:
+                - /url: https://indebel.be/cgu-particuliers
+              - text: ", et d'être contacté par des professionnels."

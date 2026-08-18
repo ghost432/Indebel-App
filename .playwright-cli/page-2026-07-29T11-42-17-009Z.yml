@@ -1,0 +1,43 @@
+- generic [ref=e3]:
+  - navigation [ref=e9]:
+    - link "Aller sur indebel.be" [ref=e12] [cursor=pointer]:
+      - /url: https://indebel.be
+      - img "Indebel" [ref=e13]
+  - main [ref=e145]:
+    - generic [ref=e148]:
+      - button "Retour aux missions" [ref=e149] [cursor=pointer]
+      - paragraph [ref=e152]: Mission publique
+      - heading "Mission Test - UI Design Freelancer" [level=1] [ref=e153]
+      - generic [ref=e154]:
+        - generic [ref=e155]: Forfait fixe
+        - generic [ref=e159]: SANI & CV SOLUTIONS
+        - generic [ref=e164]: 123 Rue de Test, Bruxelles
+    - generic [ref=e170]:
+      - article [ref=e171]:
+        - generic [ref=e172]:
+          - heading "Description de la mission" [level=2] [ref=e173]
+          - paragraph [ref=e178]: Ceci est une mission de test pour visualiser les nouvelles interfaces de la plateforme Indebel.
+        - generic [ref=e179]:
+          - heading "Compétences recherchées" [level=2] [ref=e180]
+          - generic [ref=e185]:
+            - generic [ref=e186]: Figma
+            - generic [ref=e187]: React
+      - complementary [ref=e188]:
+        - generic [ref=e189]:
+          - paragraph [ref=e190]: Budget
+          - paragraph [ref=e193]: 2500.00 €
+        - generic [ref=e194]:
+          - paragraph [ref=e195]: Type de mission
+          - paragraph [ref=e199]: jour
+        - generic [ref=e200]:
+          - paragraph [ref=e201]: Profils recherchés
+          - paragraph [ref=e207]: 1 personne(s)
+        - generic [ref=e208]:
+          - paragraph [ref=e209]: Début souhaité
+          - paragraph [ref=e212]: 01/08/2026
+        - generic [ref=e213]:
+          - paragraph [ref=e214]: Adresse
+          - paragraph [ref=e218]: 123 Rue de Test, Bruxelles
+        - generic [ref=e219]:
+          - button "Postuler manuellement" [ref=e220] [cursor=pointer]
+          - button "Postuler avec IA" [ref=e224] [cursor=pointer]

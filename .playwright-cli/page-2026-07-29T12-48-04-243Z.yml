@@ -1,0 +1,191 @@
+- generic [ref=f2e3]:
+  - navigation [ref=f2e9]:
+    - generic [ref=f2e11]:
+      - link "Aller sur indebel.be" [ref=f2e12] [cursor=pointer]:
+        - /url: https://indebel.be
+        - img "Indebel" [ref=f2e13]
+      - generic [ref=f2e15]:
+        - link "Tableau de bord" [ref=f2e429] [cursor=pointer]:
+          - /url: /employer/dashboard
+        - link "Devis" [ref=f2e436] [cursor=pointer]:
+          - /url: /devis
+        - link "Mission" [ref=f2e441] [cursor=pointer]:
+          - /url: /missions
+      - button "Ouvrir le menu du profil" [ref=f2e53] [cursor=pointer]:
+        - generic [ref=f2e54]: ET
+        - generic [ref=f2e60]:
+          - generic [ref=f2e61]: Entreprise Test Indebel
+          - generic [ref=f2e62]: Recruteur
+  - main [ref=f2e63]:
+    - generic [ref=f2e66]:
+      - generic [ref=f2e67]:
+        - generic [ref=f2e68]:
+          - generic [ref=f2e69]: Opportunités publiques
+          - heading "Devis disponibles" [level=1] [ref=f2e73]
+          - paragraph [ref=f2e74]: Consultez les demandes validées par Indebel. Les informations sensibles restent protégées jusqu'à la connexion.
+        - link "Demander un devis" [ref=f2e75] [cursor=pointer]:
+          - /url: /demande-devis
+      - generic [ref=f2e78]:
+        - article [ref=f2e79]:
+          - paragraph [ref=f2e83]: Demandes publiées
+          - paragraph [ref=f2e84]: "16"
+        - article [ref=f2e85]:
+          - paragraph [ref=f2e91]: Maximum par demande
+          - paragraph [ref=f2e92]: 5 devis
+        - article [ref=f2e93]:
+          - paragraph [ref=f2e96]: Mises à jour
+          - paragraph [ref=f2e97]: Récentes
+    - generic [ref=f2e98]:
+      - generic [ref=f2e99]:
+        - textbox "Rechercher par ville, catégorie ou travaux" [ref=f2e101]
+        - button "Actualiser" [ref=f2e102] [cursor=pointer]
+      - generic [ref=f2e108]:
+        - article [ref=f2e109]:
+          - generic [ref=f2e111]:
+            - generic [ref=f2e112]:
+              - paragraph [ref=f2e114]: Plomberie & Sanitaire
+              - heading "Rénovation complète salle de bain" [level=3] [ref=f2e115]
+              - generic [ref=f2e116]:
+                - generic [ref=f2e117]: Ixelles
+                - generic [ref=f2e121]: 29 juil. 2026
+                - generic [ref=f2e124]: 1/5 devis
+            - generic [ref=f2e130]:
+              - generic [ref=f2e131]:
+                - paragraph [ref=f2e132]: 4 500 €
+                - paragraph [ref=f2e133]: Budget estimé
+              - generic [ref=f2e134]: Urgent
+          - paragraph [ref=f2e138]: Nous souhaitons refaire entièrement notre salle de bain de 10m2. Dépose de l'ancienne baignoire, installation d'une douche à l'italienne, pose de nouveau carrelage mural et au sol, et remplacement du meuble double vasque.
+          - button "Voir le détail" [ref=f2e140] [cursor=pointer]
+        - article [ref=f2e141]:
+          - generic [ref=f2e143]:
+            - generic [ref=f2e144]:
+              - generic [ref=f2e145]:
+                - paragraph [ref=f2e146]: Électricité
+                - generic [ref=f2e147]: Traité
+              - heading "Test popup quota - installation luminaire" [level=3] [ref=f2e148]
+              - generic [ref=f2e149]:
+                - generic [ref=f2e150]: Bruxelles
+                - generic [ref=f2e154]: 09 août 2026
+                - generic [ref=f2e157]: 0/5 devis
+            - generic [ref=f2e163]:
+              - generic [ref=f2e164]:
+                - paragraph [ref=f2e165]: 180 €
+                - paragraph [ref=f2e166]: Budget estimé
+              - generic [ref=f2e167]: Urgent
+          - paragraph [ref=f2e171]: Deuxième demande de test créée par Codex pour vérifier que le popup de quota apparaît quand le prestataire a déjà 9 vues détail.
+          - button "Voir le détail" [ref=f2e173] [cursor=pointer]
+        - article [ref=f2e174]:
+          - generic [ref=f2e176]:
+            - generic [ref=f2e177]:
+              - paragraph [ref=f2e179]: Rénovation & Construction
+              - heading "sonnerie appartement en panne" [level=3] [ref=f2e180]
+              - generic [ref=f2e181]:
+                - generic [ref=f2e182]: Sint-Genesius-Rode
+                - generic [ref=f2e186]: 14 juil. 2026
+                - generic [ref=f2e189]: 0/5 devis
+            - generic [ref=f2e195]:
+              - generic [ref=f2e196]:
+                - paragraph [ref=f2e197]: Non précisé
+                - paragraph [ref=f2e198]: Budget estimé
+              - generic [ref=f2e199]: Urgent
+          - paragraph [ref=f2e203]: La sonnerie de mon appartement ne marche plus. Besoins d'un petit dépannage.
+          - button "Voir le détail" [ref=f2e205] [cursor=pointer]
+        - article [ref=f2e206]:
+          - generic [ref=f2e208]:
+            - generic [ref=f2e209]:
+              - paragraph [ref=f2e211]: Rénovation & Construction
+              - heading "Carrelage sol et mur" [level=3] [ref=f2e212]
+              - generic [ref=f2e213]:
+                - generic [ref=f2e214]: Genk
+                - generic [ref=f2e218]: 12 juil. 2026
+                - generic [ref=f2e221]: 0/5 devis
+            - generic [ref=f2e227]:
+              - generic [ref=f2e228]:
+                - paragraph [ref=f2e229]: Non précisé
+                - paragraph [ref=f2e230]: Budget estimé
+              - generic [ref=f2e231]: Urgent
+          - paragraph [ref=f2e235]: Carrelage sol et mur
+          - button "Voir le détail" [ref=f2e237] [cursor=pointer]
+        - article [ref=f2e238]:
+          - generic [ref=f2e240]:
+            - generic [ref=f2e241]:
+              - paragraph [ref=f2e243]: Rénovation & Construction
+              - heading "Réparation portail en métal" [level=3] [ref=f2e244]
+              - generic [ref=f2e245]:
+                - generic [ref=f2e246]: Genappe
+                - generic [ref=f2e250]: 10 juil. 2026
+                - generic [ref=f2e253]: 0/5 devis
+            - generic [ref=f2e259]:
+              - generic [ref=f2e260]:
+                - paragraph [ref=f2e261]: Non précisé
+                - paragraph [ref=f2e262]: Budget estimé
+              - generic [ref=f2e263]: Urgent
+          - paragraph [ref=f2e267]: Bonjour, je cherche un professionel capable de réparer des charnières d un portail en métal soudé, de même que réparer le système d ouverture NICE d un portail existant, donc les moteurs fonctionnent, l électronique fonctionne (il s ouvre de manière épisodique) mais dont sans doute un ou plusieurs capteurs sont défectueux.
+          - button "Voir le détail" [ref=f2e269] [cursor=pointer]
+        - article [ref=f2e270]:
+          - generic [ref=f2e272]:
+            - generic [ref=f2e273]:
+              - paragraph [ref=f2e275]: Rénovation & Construction
+              - heading "Reparations" [level=3] [ref=f2e276]
+              - generic [ref=f2e277]:
+                - generic [ref=f2e278]: Vilvoorde
+                - generic [ref=f2e282]: 05 juil. 2026
+                - generic [ref=f2e285]: 0/5 devis
+            - generic [ref=f2e291]:
+              - generic [ref=f2e292]:
+                - paragraph [ref=f2e293]: Non précisé
+                - paragraph [ref=f2e294]: Budget estimé
+              - generic [ref=f2e295]: Urgent
+          - paragraph [ref=f2e299]: Bonjour nous avons besoin d un menuisier pour avoir son avis au sujet de notre veranda exterieure qui pourri svp? Merci beaucoup
+          - button "Voir le détail" [ref=f2e301] [cursor=pointer]
+        - article [ref=f2e302]:
+          - generic [ref=f2e304]:
+            - generic [ref=f2e305]:
+              - paragraph [ref=f2e307]: Rénovation & Construction
+              - heading "Menuiserie" [level=3] [ref=f2e308]
+              - generic [ref=f2e309]:
+                - generic [ref=f2e310]: Ottignies-Louvain-la-Neuve
+                - generic [ref=f2e314]: 20 juil. 2026
+                - generic [ref=f2e317]: 0/5 devis
+            - generic [ref=f2e323]:
+              - generic [ref=f2e324]:
+                - paragraph [ref=f2e325]: Non précisé
+                - paragraph [ref=f2e326]: Budget estimé
+              - generic [ref=f2e327]: Urgent
+          - paragraph [ref=f2e331]: Remplacement d'un chambranle de porte intérieur
+          - button "Voir le détail" [ref=f2e333] [cursor=pointer]
+        - article [ref=f2e334]:
+          - generic [ref=f2e336]:
+            - generic [ref=f2e337]:
+              - paragraph [ref=f2e339]: Rénovation & Construction
+              - heading "Pose d'auvent sur ma terrasse" [level=3] [ref=f2e340]
+              - generic [ref=f2e341]:
+                - generic [ref=f2e342]: Seraing
+                - generic [ref=f2e346]: 13 juil. 2026
+                - generic [ref=f2e349]: 0/5 devis
+            - generic [ref=f2e355]:
+              - generic [ref=f2e356]:
+                - paragraph [ref=f2e357]: Non précisé
+                - paragraph [ref=f2e358]: Budget estimé
+              - generic [ref=f2e359]: Urgent
+          - paragraph [ref=f2e363]: Bonjour, Nous venons d'acheter 2 auvents pour notre terrasse et nous aimerions avoir de l'aide pour leur pose. Merci de vos réponses
+          - button "Voir le détail" [ref=f2e365] [cursor=pointer]
+        - article [ref=f2e366]:
+          - generic [ref=f2e368]:
+            - generic [ref=f2e369]:
+              - paragraph [ref=f2e371]: Rénovation & Construction
+              - heading "Création sortie hotte de cuisine sur toiture plate" [level=3] [ref=f2e372]
+              - generic [ref=f2e373]:
+                - generic [ref=f2e374]: Quaregnon
+                - generic [ref=f2e378]: 29 juin 2026
+                - generic [ref=f2e381]: 1/5 devis
+            - generic [ref=f2e387]:
+              - generic [ref=f2e388]:
+                - paragraph [ref=f2e389]: Non précisé
+                - paragraph [ref=f2e390]: Budget estimé
+              - generic [ref=f2e391]: Urgent
+          - paragraph [ref=f2e395]: Création d’une sortie de hotte de cuisine sur toiture plate. Carottage à faire
+          - button "Voir le détail" [ref=f2e397] [cursor=pointer]
+      - generic [ref=f2e398]:
+        - button "1" [ref=f2e399] [cursor=pointer]
+        - button "2" [ref=f2e400] [cursor=pointer]

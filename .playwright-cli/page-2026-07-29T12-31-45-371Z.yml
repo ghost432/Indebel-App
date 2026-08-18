@@ -1,0 +1,36 @@
+- generic [ref=e3]:
+  - img "Chargement..." [ref=e6]
+  - navigation [ref=e9]:
+    - generic [ref=e11]:
+      - link "Aller sur indebel.be" [ref=e12] [cursor=pointer]:
+        - /url: https://indebel.be
+        - img "Indebel" [ref=e13]
+      - generic [ref=e15]:
+        - link "Accueil" [ref=e16] [cursor=pointer]:
+          - /url: https://indebel.be
+        - link "Devis" [ref=e23] [cursor=pointer]:
+          - /url: /devis
+        - link "Mission" [ref=e28] [cursor=pointer]:
+          - /url: /missions
+  - main [ref=e33]:
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: Opportunités publiques
+          - heading "Devis disponibles" [level=1] [ref=e43]
+          - paragraph [ref=e44]: Consultez les demandes validées par Indebel. Les informations sensibles restent protégées jusqu'à la connexion.
+        - link "Demander un devis" [ref=e45] [cursor=pointer]:
+          - /url: /demande-devis
+      - generic [ref=e48]:
+        - article [ref=e49]:
+          - paragraph [ref=e53]: Demandes publiées
+          - paragraph [ref=e54]: "0"
+        - article [ref=e55]:
+          - paragraph [ref=e61]: Maximum par demande
+          - paragraph [ref=e62]: 5 devis
+        - article [ref=e63]:
+          - paragraph [ref=e66]: Mises à jour
+          - paragraph [ref=e67]: Récentes
+    - generic [ref=e69]:
+      - textbox "Rechercher par ville, catégorie ou travaux" [ref=e71]
+      - button "Actualiser" [ref=e72] [cursor=pointer]

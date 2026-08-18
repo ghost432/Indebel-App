@@ -1,0 +1,445 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: Besoin d'un professionnel ? Trouvez-le sur Indebel !
+      - generic [ref=e7] [cursor=pointer]: 
+    - generic [ref=e8]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - link "" [ref=e12] [cursor=pointer]:
+            - /url: https://www.facebook.com/share/1BefEfLns8/
+            - generic [ref=e13]: 
+          - link "" [ref=e14] [cursor=pointer]:
+            - /url: https://www.instagram.com/indebel.be?igsh=MTA0Ymw2c2V6bDBnaQ==
+            - generic [ref=e15]: 
+          - link "" [ref=e16] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/ind%C3%A9go/
+            - generic [ref=e17]: 
+          - link "" [ref=e18] [cursor=pointer]:
+            - /url: https://www.tiktok.com/@indebel
+            - generic [ref=e19]: 
+          - link "" [ref=e20] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCXKqrn-OMbJGVlhgpYxRmPg
+            - generic [ref=e21]: 
+        - generic [ref=e22]:
+          - link "Vous êtes Prestataire ?" [ref=e23] [cursor=pointer]:
+            - /url: /prestataire
+          - link "Vous êtes Recruteur ?" [ref=e24] [cursor=pointer]:
+            - /url: /recruteur
+          - link " 02 522 91 43" [ref=e25] [cursor=pointer]:
+            - /url: tel:+3225229143
+            - generic [ref=e26]: 
+            - text: 02 522 91 43
+        - link " Appeler maintenant" [ref=e28] [cursor=pointer]:
+          - /url: tel:+3225229143
+          - generic [ref=e29]: 
+          - text: Appeler maintenant
+      - banner [ref=e30]:
+        - generic [ref=e32]:
+          - link "Indebel Logo" [ref=e34] [cursor=pointer]:
+            - /url: /
+            - img "Indebel Logo" [ref=e35]
+          - button "" [ref=e36] [cursor=pointer]:
+            - generic [ref=e37]: 
+  - main [ref=e38]:
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]: 
+          - text: Service 100% gratuit & sans engagement
+        - heading "Trouvez un professionnel qualifié pour vos travaux de plomberie" [level=1] [ref=e45]
+        - paragraph [ref=e46]: Décrivez votre projet en quelques minutes. Service gratuit et sans engagement pour les particuliers.
+        - generic [ref=e47]:
+          - paragraph [ref=e48]:
+            - generic [ref=e49]: 
+            - generic [ref=e50]: Obtenez vos devis gratuit en quelques clics
+          - link " Commencer" [ref=e51] [cursor=pointer]:
+            - /url: https://pro.indebel.be/demande-devis
+            - generic [ref=e52]: 
+            - text: Commencer
+        - generic [ref=e53]:
+          - generic [ref=e54]: 
+          - text: Besoin d'aide ?
+          - link "02 522 91 43" [ref=e55] [cursor=pointer]:
+            - /url: tel:+3225229143
+        - generic [ref=e56]:
+          - generic [ref=e58]: 
+          - generic [ref=e59]:
+            - strong [ref=e60]: Décrivez votre projet en 2 minutes
+            - generic [ref=e61]: Nous vous redirigeons ensuite vers notre formulaire sécurisé. Gratuit et sans engagement.
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - generic [ref=e64]: 
+            - generic [ref=e65]: Service gratuit pour les particuliers
+          - generic [ref=e66]:
+            - generic [ref=e67]: 
+            - generic [ref=e68]: Demande sans engagement
+          - generic [ref=e69]:
+            - generic [ref=e70]: 
+            - generic [ref=e71]: Professionnels qualifiés
+          - generic [ref=e72]:
+            - generic [ref=e73]: 
+            - generic [ref=e74]: Projet transmis rapidement
+      - generic [ref=e76]:
+        - img "Artisan professionnel Indebel" [ref=e77]
+        - generic [ref=e78]:
+          - generic [ref=e80]: 
+          - generic [ref=e81]: Professionnels qualifiés
+        - generic [ref=e82]:
+          - generic [ref=e84]: 
+          - generic [ref=e85]: Service gratuit
+        - generic [ref=e86]:
+          - generic [ref=e88]: 
+          - generic [ref=e89]: Sans engagement
+    - generic [ref=e91]:
+      - heading "Catégories les plus demandées" [level=3] [ref=e92]
+      - generic [ref=e93]:
+        - link " Rénovation" [ref=e94] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=renovation
+          - generic [ref=e96]: 
+          - generic [ref=e97]: Rénovation
+        - link " Toiture" [ref=e98] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=toiture
+          - generic [ref=e100]: 
+          - generic [ref=e101]: Toiture
+        - link " Plomberie" [ref=e102] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=plomberie
+          - generic [ref=e104]: 
+          - generic [ref=e105]: Plomberie
+        - link " Électricité" [ref=e106] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=electricite
+          - generic [ref=e108]: 
+          - generic [ref=e109]: Électricité
+        - link " Peinture" [ref=e110] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=peinture
+          - generic [ref=e112]: 
+          - generic [ref=e113]: Peinture
+        - link " Chauffage" [ref=e114] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=chauffage
+          - generic [ref=e116]: 
+          - generic [ref=e117]: Chauffage
+        - link " Nettoyage" [ref=e118] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=nettoyage
+          - generic [ref=e120]: 
+          - generic [ref=e121]: Nettoyage
+        - link " Déménagement" [ref=e122] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=demenagement
+          - generic [ref=e124]: 
+          - generic [ref=e125]: Déménagement
+        - link " Isolation" [ref=e126] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=isolation
+          - generic [ref=e128]: 
+          - generic [ref=e129]: Isolation
+        - link " Jardinage" [ref=e130] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=jardinage
+          - generic [ref=e132]: 
+          - generic [ref=e133]: Jardinage
+        - link " Menuiserie" [ref=e134] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=menuiserie
+          - generic [ref=e136]: 
+          - generic [ref=e137]: Menuiserie
+        - link " Carrelage" [ref=e138] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis?categorie=carrelage
+          - generic [ref=e140]: 
+          - generic [ref=e141]: Carrelage
+    - generic [ref=e143]:
+      - paragraph [ref=e144]: Devis gratuit en Belgique
+      - heading "Sélectionnez la catégorie de vos travaux" [level=2] [ref=e145]
+      - paragraph [ref=e146]: Cliquez sur un secteur d'activité ci-dessous pour découvrir toutes nos catégories de prestations et lancer votre demande.
+      - generic [ref=e147]:
+        - generic [ref=e148] [cursor=pointer]:
+          - generic [ref=e150]: 
+          - heading "Rénovation & Construction" [level=3] [ref=e151]
+          - paragraph [ref=e152]: Terrassement, maçonnerie, toiture, plomberie, électricité, menuiserie, peinture et rénovations intérieures ou extérieures.
+          - link " Demander un devis" [ref=e153]:
+            - /url: https://pro.indebel.be/demande-devis?categorie=renovation
+            - generic [ref=e154]: 
+            - text: Demander un devis
+        - generic [ref=e155] [cursor=pointer]:
+          - generic [ref=e157]: 
+          - heading "Transport & Logistique" [level=3] [ref=e158]
+          - paragraph [ref=e159]: Déménagement, transport de marchandises, livraison express, logistique événementielle et transport routier.
+          - link " Demander un devis" [ref=e160]:
+            - /url: https://pro.indebel.be/demande-devis?categorie=transport
+            - generic [ref=e161]: 
+            - text: Demander un devis
+        - generic [ref=e162] [cursor=pointer]:
+          - generic [ref=e164]: 
+          - heading "Nettoyage & Multiservices" [level=3] [ref=e165]
+          - paragraph [ref=e166]: Nettoyage de bureaux, fin de chantier, entretien de jardins, petits travaux de bricolage et aide à domicile.
+          - link " Demander un devis" [ref=e167]:
+            - /url: https://pro.indebel.be/demande-devis?categorie=nettoyage
+            - generic [ref=e168]: 
+            - text: Demander un devis
+    - generic [ref=e171]:
+      - generic [ref=e172]:
+        - paragraph [ref=e173]: Simple & 100% gratuit
+        - heading "Prêt à déposer votre demande gratuitement ?" [level=2] [ref=e174]
+        - paragraph [ref=e175]: Décrivez votre projet en quelques minutes et soyez mis en relation avec des professionnels qualifiés de votre région. Service entièrement gratuit, sans engagement de votre part.
+        - list [ref=e176]:
+          - listitem [ref=e177]:
+            - generic [ref=e178]: 
+            - text: Gratuit & sans engagement
+          - listitem [ref=e179]:
+            - generic [ref=e180]: 
+            - text: Jusqu'à 5 professionnels concernés selon votre projet
+          - listitem [ref=e181]:
+            - generic [ref=e182]: 
+            - text: Entreprises BCE & assurées
+          - listitem [ref=e183]:
+            - generic [ref=e184]: 
+            - text: Projet transmis rapidement
+        - link " Commencer" [ref=e185] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis
+          - generic [ref=e186]: 
+          - text: Commencer
+      - generic [ref=e187]:
+        - img "Particulier publiant un projet de rénovation sur Indebel" [ref=e188]
+        - generic [ref=e189]:
+          - generic [ref=e190]: 
+          - generic [ref=e191]:
+            - strong [ref=e192]: Réponse rapide
+            - text: En moins de 24h
+    - generic [ref=e194]:
+      - paragraph [ref=e195]: Concept simple & efficace
+      - heading "Comment fonctionne Indebel pour les particuliers ?" [level=2] [ref=e196]
+      - paragraph [ref=e197]: Notre service de mise en relation innovant est 100% gratuit et sans aucun engagement.
+      - generic [ref=e198]:
+        - generic [ref=e199]:
+          - generic [ref=e200]: "1"
+          - heading "Décrivez votre projet" [level=3] [ref=e201]
+          - paragraph [ref=e202]: Indiquez le type de travaux ou de service recherché, votre localisation et vos besoins.
+        - generic [ref=e203]:
+          - generic [ref=e204]: "2"
+          - heading "Votre demande est transmise" [level=3] [ref=e205]
+          - paragraph [ref=e206]: "Votre projet est envoyé aux professionnels qualifiés concernés selon votre besoin et votre région. Pas d'algorithme aveugle : chaque demande est vérifiée."
+        - generic [ref=e207]:
+          - generic [ref=e208]: "3"
+          - heading "Les professionnels vous recontactent" [level=3] [ref=e209]
+          - paragraph [ref=e210]: Vous échangez directement avec les professionnels intéressés par votre demande. Ils étudient votre projet et vous proposent leur approche. Ancienne version ignorée - Vous échangez directement avec les professionnels intéressés par votre demande.
+        - generic [ref=e211]:
+          - generic [ref=e212]: "4"
+          - heading "Vous choisissez librement" [level=3] [ref=e213]
+          - paragraph [ref=e214]: Vous restez libre de donner suite ou non, sans aucun engagement. Indebel ne vous impose aucun choix et ne garantit pas de prix.
+    - generic [ref=e215]:
+      - generic [ref=e216]:
+        - heading "Demandes de devis récentes en Belgique" [level=2] [ref=e217]
+        - paragraph [ref=e218]: Exemples de projets soumis par d'autres particuliers sur la plateforme
+        - link "Voir toutes les demandes" [ref=e219] [cursor=pointer]:
+          - /url: https://pro.indebel.be/devis
+          - text: Voir toutes les demandes
+          - img [ref=e220]
+      - paragraph [ref=e225]: Aucune demande disponible.
+    - generic [ref=e228]:
+      - generic [ref=e229]:
+        - img "Vérification des entrepreneurs Indebel" [ref=e231]
+        - generic [ref=e232]:
+          - generic [ref=e234]: 
+          - generic [ref=e235]:
+            - heading "Sécurité Garantie" [level=4] [ref=e236]
+            - text: Entreprises 100% contrôlées
+      - generic [ref=e237]:
+        - paragraph [ref=e238]: Confiance & Qualité
+        - 'heading "Le Label de Qualité Indebel : Votre tranquillité d''esprit" [level=2] [ref=e239]'
+        - paragraph [ref=e240]: Contrairement aux simples annuaires de chantiers, Indebel s'engage activement à fiabiliser son réseau de professionnels belges pour assurer le succès de vos projets.
+        - generic [ref=e241]:
+          - generic [ref=e242]:
+            - generic [ref=e244]: 
+            - generic [ref=e245]:
+              - heading "Vérification des accès & assurances" [level=4] [ref=e246]
+              - paragraph [ref=e247]: Nous contrôlons l'enregistrement à la Banque-Carrefour des Entreprises (BCE), la validité de l'accès à la profession et la souscription aux assurances décennales et RC professionnelles.
+          - generic [ref=e248]:
+            - generic [ref=e250]: 
+            - generic [ref=e251]:
+              - heading "Suivi strict des avis clients" [level=4] [ref=e252]
+              - paragraph [ref=e253]: Notre système de notation filtre automatiquement notre base de partenaires. Un avis négatif vérifié ou une plainte répétée peut entraîner une vérification approfondie, voire l'exclusion de l'entreprise.
+          - generic [ref=e254]:
+            - generic [ref=e256]: 
+            - generic [ref=e257]:
+              - heading "Assistance commerciale locale" [level=4] [ref=e258]
+              - paragraph [ref=e259]: Notre secrétariat et nos conseillers sont à votre entière disposition par téléphone et par email pour affiner vos demandes de devis et vous orienter vers les bons corps de métier.
+    - generic [ref=e262]:
+      - generic [ref=e263]:
+        - img "Trouvez l'artisan idéal avec Indebel" [ref=e264]
+        - generic [ref=e265]:
+          - generic [ref=e267]: 
+          - generic [ref=e268]:
+            - heading "100% Confiance" [level=4] [ref=e269]
+            - text: Mise en relation directe certifiée
+      - generic [ref=e270]:
+        - paragraph [ref=e271]: Un accompagnement de A à Z
+        - heading "Trouvez l'artisan idéal pour votre projet de travaux" [level=2] [ref=e272]
+        - paragraph [ref=e273]: Que vous planifiez une extension de maison en ossature bois à Mons, la rénovation énergétique complète de votre logement à Bruxelles ou de simples travaux de peinture à Liège, Indebel simplifie votre recherche d'entrepreneur.
+        - generic [ref=e274]:
+          - generic [ref=e275]:
+            - generic [ref=e276]: 
+            - generic [ref=e277]:
+              - strong [ref=e278]: Artisans Belges Agréés
+              - text: Toutes les entreprises partenaires disposent d'un numéro BCE actif, des accès professionnels requis et de leurs assurances décennales à jour.
+          - generic [ref=e279]:
+            - generic [ref=e280]: 
+            - generic [ref=e281]:
+              - strong [ref=e282]: Mise en relation avec plusieurs professionnels
+              - text: Selon votre projet et votre région, votre demande peut être transmise à plusieurs professionnels qualifiés. Vous échangez directement avec eux, librement.
+          - generic [ref=e283]:
+            - generic [ref=e284]: 
+            - generic [ref=e285]:
+              - strong [ref=e286]: Accès direct & Aucun intermédiaire
+              - text: Nous vous mettons en relation directe avec les professionnels concernés. Vous échangez librement et restez maître de votre décision, sans engagement.
+        - link " Commencer" [ref=e287] [cursor=pointer]:
+          - /url: https://pro.indebel.be/demande-devis
+          - generic [ref=e288]: 
+          - text: Commencer
+    - generic [ref=e290]:
+      - generic [ref=e291]:
+        - paragraph [ref=e292]: Pourquoi choisir Indebel ?
+        - heading "Une approche différente et transparente des travaux" [level=2] [ref=e293]
+        - paragraph [ref=e294]: Nous mettons la confiance et la rigueur au cœur de notre service pour simplifier votre recherche d'entrepreneur.
+      - generic [ref=e295]:
+        - generic [ref=e296]:
+          - generic [ref=e298]: 
+          - heading "Zéro matching automatisé aveugle" [level=3] [ref=e299]
+          - paragraph [ref=e300]: Contrairement aux plateformes qui distribuent votre projet de manière purement algorithmique, nos conseillers belges qualifient chaque demande pour la transmettre uniquement aux entrepreneurs qualifiés et réellement disponibles.
+        - generic [ref=e301]:
+          - generic [ref=e303]: 
+          - heading "Audit strict de solvabilité (BCE)" [level=3] [ref=e304]
+          - paragraph [ref=e305]: Nous vérifions régulièrement la Banque-Carrefour des Entreprises, mais aussi les éventuelles dettes fiscales ou sociales des entrepreneurs. Vous évitez les mauvaises surprises et les faillites de chantiers en cours.
+        - generic [ref=e306]:
+          - generic [ref=e308]: 
+          - heading "Indépendance & Neutralité" [level=3] [ref=e309]
+          - paragraph [ref=e310]: Indebel est un tiers de confiance neutre. Notre rémunération ne dépend pas de l'artisan que vous choisissez, garantissant des conseils objectifs et des propositions commerciales transparentes sans aucun surcoût.
+    - generic [ref=e312]:
+      - generic [ref=e313]:
+        - paragraph [ref=e314]: Questions fréquentes
+        - heading "Vous avez des questions ? Nous avons les réponses." [level=2] [ref=e315]
+      - generic [ref=e316]:
+        - group [ref=e317]:
+          - generic "Le service est-il gratuit pour les particuliers ? +" [ref=e318] [cursor=pointer]:
+            - text: Le service est-il gratuit pour les particuliers ?
+            - generic [ref=e319]: +
+        - group [ref=e320]:
+          - generic "Suis-je obligé d'accepter une proposition ? +" [ref=e321] [cursor=pointer]:
+            - text: Suis-je obligé d'accepter une proposition ?
+            - generic [ref=e322]: +
+        - group [ref=e323]:
+          - generic "Indebel compare-t-il les tarifs à ma place ? +" [ref=e324] [cursor=pointer]:
+            - text: Indebel compare-t-il les tarifs à ma place ?
+            - generic [ref=e325]: +
+        - group [ref=e326]:
+          - generic "Combien de professionnels peuvent me contacter ? +" [ref=e327] [cursor=pointer]:
+            - text: Combien de professionnels peuvent me contacter ?
+            - generic [ref=e328]: +
+        - group [ref=e329]:
+          - generic "Dans quelles régions le service est-il disponible ? +" [ref=e330] [cursor=pointer]:
+            - text: Dans quelles régions le service est-il disponible ?
+            - generic [ref=e331]: +
+    - generic [ref=e333]:
+      - generic [ref=e334]:
+        - paragraph [ref=e335]: Conseils & Actualités
+        - heading "Nos guides travaux pour réussir vos projets" [level=2] [ref=e336]
+        - paragraph [ref=e337]: Retrouvez les conseils de nos experts pour estimer vos budgets et choisir les bons matériaux.
+      - generic [ref=e338]:
+        - article [ref=e339]:
+          - 'img "Déménagement : la checklist pour ne rien oublier" [ref=e341]'
+          - generic [ref=e342]:
+            - generic [ref=e343]: 04/08/2025
+            - 'heading "Déménagement : la checklist pour ne rien oublier" [level=3] [ref=e344]'
+            - paragraph [ref=e345]: Changement d'adresse, transfert de contrats, cartons... nous vous aidons à organiser votre départ en toute sérénité.
+            - link "Lire la suite " [ref=e346] [cursor=pointer]:
+              - /url: /blog-articles?id=7
+              - text: Lire la suite
+              - generic [ref=e347]: 
+        - article [ref=e348]:
+          - img "Les primes à la rénovation en Belgique en 2025" [ref=e350]
+          - generic [ref=e351]:
+            - generic [ref=e352]: 03/08/2025
+            - heading "Les primes à la rénovation en Belgique en 2025" [level=3] [ref=e353]
+            - paragraph [ref=e354]: Saviez-vous que vous pouviez récupérer une partie de vos frais de travaux ? Le point sur les aides en Wallonie et à Bruxelles.
+            - link "Lire la suite " [ref=e355] [cursor=pointer]:
+              - /url: /blog-articles?id=6
+              - text: Lire la suite
+              - generic [ref=e356]: 
+        - article [ref=e357]:
+          - img "5 conseils pour choisir le bon artisan" [ref=e359]
+          - generic [ref=e360]:
+            - generic [ref=e361]: 02/08/2025
+            - heading "5 conseils pour choisir le bon artisan" [level=3] [ref=e362]
+            - paragraph [ref=e363]: Le prix n'est pas le seul critère. Vérifiez les assurances, les références et le feeling lors de la première rencontre.
+            - link "Lire la suite " [ref=e364] [cursor=pointer]:
+              - /url: /blog-articles?id=5
+              - text: Lire la suite
+              - generic [ref=e365]: 
+        - article [ref=e366]:
+          - img "Comment bien préparer sa demande de devis ?" [ref=e368]
+          - generic [ref=e369]:
+            - generic [ref=e370]: 01/08/2025
+            - heading "Comment bien préparer sa demande de devis ?" [level=3] [ref=e371]
+            - paragraph [ref=e372]: Pour obtenir des devis précis, il est essentiel de bien décrire votre projet. Découvrez nos conseils pour ne rien oublier dans votre descriptif.
+            - link "Lire la suite " [ref=e373] [cursor=pointer]:
+              - /url: /blog-articles?id=4
+              - text: Lire la suite
+              - generic [ref=e374]: 
+      - link "Voir tous nos articles de conseils" [ref=e376] [cursor=pointer]:
+        - /url: /blog-particulier
+  - contentinfo [ref=e378]:
+    - generic [ref=e380]:
+      - generic [ref=e381]:
+        - img "Indebel Logo" [ref=e382]
+        - paragraph [ref=e383]: Trouvez facilement un professionnel de confiance pour tous vos projets en Belgique.
+      - generic [ref=e384]:
+        - heading "Pour vous" [level=3] [ref=e385]
+        - list [ref=e386]:
+          - listitem [ref=e387]:
+            - link "Comment ça marche?" [ref=e388] [cursor=pointer]:
+              - /url: /how-it-works
+          - listitem [ref=e389]:
+            - link "FAQ Particuliers" [ref=e390] [cursor=pointer]:
+              - /url: /faqs-particuliers
+          - listitem [ref=e391]:
+            - link "Contact Support" [ref=e392] [cursor=pointer]:
+              - /url: /contact
+          - listitem [ref=e393]:
+            - link " 02 522 91 43" [ref=e394] [cursor=pointer]:
+              - /url: tel:+3225229143
+              - generic [ref=e395]: 
+              - text: 02 522 91 43
+      - generic [ref=e396]:
+        - heading "Infos Légales" [level=3] [ref=e397]
+        - list [ref=e398]:
+          - listitem [ref=e399]:
+            - link "CGU Particuliers" [ref=e400] [cursor=pointer]:
+              - /url: /cgu-particuliers
+          - listitem [ref=e401]:
+            - link "Confidentialité" [ref=e402] [cursor=pointer]:
+              - /url: /politique-de-confidentialite
+          - listitem [ref=e403]:
+            - link "Mentions Légales" [ref=e404] [cursor=pointer]:
+              - /url: /cgu
+      - generic [ref=e405]:
+        - heading "Suivez-nous" [level=3] [ref=e406]
+        - generic [ref=e407]:
+          - link "" [ref=e408] [cursor=pointer]:
+            - /url: https://www.facebook.com/share/1BefEfLns8/
+            - generic [ref=e409]: 
+          - link "" [ref=e410] [cursor=pointer]:
+            - /url: https://www.instagram.com/indebel.be?igsh=MTA0Ymw2c2V6bDBnaQ==
+            - generic [ref=e411]: 
+          - link "" [ref=e412] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/ind%C3%A9go/
+            - generic [ref=e413]: 
+          - link "" [ref=e414] [cursor=pointer]:
+            - /url: https://www.tiktok.com/@indebel
+            - generic [ref=e415]: 
+          - link "" [ref=e416] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCXKqrn-OMbJGVlhgpYxRmPg
+            - generic [ref=e417]: 
+        - generic [ref=e418]:
+          - generic [ref=e419]:
+            - generic [ref=e420]: 
+            - generic [ref=e421]: 
+            - generic [ref=e422]: 
+            - generic [ref=e423]: 
+            - generic [ref=e424]: 
+          - paragraph [ref=e425]: L'une des meilleures plateformes de mise en relation en Belgique.
+    - paragraph [ref=e428]: Copyright™ Indebel, Tous droits réservés.
+  - text: 

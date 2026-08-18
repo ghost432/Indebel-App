@@ -1,0 +1,84 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - generic:
+        - link "Indebel":
+          - /url: https://indebel.be
+          - img "Indebel"
+      - link "Accueil" [ref=e8] [cursor=pointer]:
+        - /url: https://indebel.be
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - heading "Demande de Devis" [level=1] [ref=e16]
+      - paragraph [ref=e17]: Décrivez votre projet et recevez jusqu'à 5 devis de professionnels qualifiés
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - heading "📋 Détails du projet" [level=2] [ref=e21]
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24]: Type de travaux *
+            - 'textbox "Ex: Rénovation salle de bain, Installation électrique..." [ref=e25]'
+          - generic [ref=e26]:
+            - generic [ref=e27]: Secteur
+            - combobox [ref=e28]:
+              - option "Sélectionnez un secteur" [selected]
+          - generic [ref=e29]:
+            - generic [ref=e30]: Priorité
+            - combobox [ref=e31]:
+              - option "Normale" [selected]
+              - option "Urgente"
+          - generic [ref=e32]:
+            - generic [ref=e33]: Description du projet *
+            - textbox "Décrivez en détail votre projet, vos besoins, vos contraintes..." [ref=e34]
+          - generic [ref=e35]:
+            - generic [ref=e36]: Date de début souhaitée
+            - textbox [ref=e37]
+          - generic [ref=e38]:
+            - generic [ref=e39]: Détails complémentaires
+            - textbox "Surface, étage, accès, contraintes particulières..." [ref=e40]
+          - generic [ref=e41]:
+            - generic [ref=e42]: Photos du projet (max 5)
+            - generic [ref=e44] [cursor=pointer]:
+              - paragraph [ref=e48]: Cliquez pour ajouter des images
+              - paragraph [ref=e49]: PNG, JPG jusqu'à 5MB
+      - generic [ref=e50]:
+        - heading "🏗️ Lieu des travaux" [level=2] [ref=e51]
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: Adresse *
+            - textbox "Rue, numéro..." [ref=e55]
+          - generic [ref=e56]:
+            - generic [ref=e57]: Code postal *
+            - textbox "1000" [ref=e58]
+          - generic [ref=e59]:
+            - generic [ref=e60]: Région *
+            - combobox [ref=e61]:
+              - option "Sélectionnez une région" [selected]
+              - option "Région de Bruxelles-Capitale"
+              - option "Région Wallonne"
+              - option "Région Flamande"
+          - generic [ref=e62]:
+            - generic [ref=e63]: Ville/Commune *
+            - textbox "Entrez votre ville" [ref=e64]
+      - generic [ref=e65]:
+        - heading "👤 Vos coordonnées" [level=2] [ref=e66]
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: Prénom *
+            - textbox [ref=e70]
+          - generic [ref=e71]:
+            - generic [ref=e72]: Nom *
+            - textbox [ref=e73]
+          - generic [ref=e74]:
+            - generic [ref=e75]: Email *
+            - textbox "votre@email.com" [ref=e76]
+          - generic [ref=e77]:
+            - generic [ref=e78]: Téléphone *
+            - textbox "+32 123 45 67 89" [ref=e79]
+      - generic [ref=e80]:
+        - button "Envoyer ma demande de devis" [ref=e81] [cursor=pointer]
+        - paragraph [ref=e85]:
+          - text: En soumettant ce formulaire, vous acceptez les
+          - link "conditions d'utilisation et politique de confidentialité" [ref=e86] [cursor=pointer]:
+            - /url: https://indebel.be/cgu-1
+          - text: ", d'être contacté par des professionnels"

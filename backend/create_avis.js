@@ -1,0 +1,4 @@
+process.chdir('/var/www/vhosts/indebel.be/pro.indebel.be/api');
+const db = require('./config/database.js');
+const sql = "CREATE TABLE IF NOT EXISTS avis_particuliers (id INT AUTO_INCREMENT PRIMARY KEY, freelancer_id INT NOT NULL, nom_auteur VARCHAR(150) NOT NULL, email_auteur VARCHAR(255) DEFAULT NULL, note TINYINT NOT NULL, commentaire TEXT NOT NULL, statut ENUM('public','masque') DEFAULT 'public', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (freelancer_id) REFERENCES users(id) ON DELETE CASCADE, INDEX idx_fl (freelancer_id), INDEX idx_nt (note)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+db.query(sql).then(([r]) => { console.log('OK TABLE:', JSON.stringify(r)); process.exit(0); }).catch(err => { console.error('ERR:', err.message); process.exit(1); });

@@ -1,0 +1,19 @@
+- generic [ref=f4e3]:
+  - img "Chargement..." [ref=f4e6]
+  - navigation [ref=f4e9]:
+    - generic [ref=f4e11]:
+      - link "Aller sur indebel.be" [ref=f4e12] [cursor=pointer]:
+        - /url: https://indebel.be
+        - img "Indebel" [ref=f4e13]
+      - generic [ref=f4e15]:
+        - link "Tableau de bord" [ref=f4e16] [cursor=pointer]:
+          - /url: /employer/dashboard
+        - link "Devis" [ref=f4e23] [cursor=pointer]:
+          - /url: /devis
+        - link "Mission" [ref=f4e28] [cursor=pointer]:
+          - /url: /missions
+      - button "Ouvrir le menu du profil" [ref=f4e35] [cursor=pointer]:
+        - generic [ref=f4e36]: ET
+        - generic [ref=f4e42]:
+          - generic [ref=f4e43]: Entreprise Test Indebel
+          - generic [ref=f4e44]: Recruteur
