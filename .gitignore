@@ -37,3 +37,5 @@ patch_*.js
 test*.js
 scratch*
 *.py
+fix_arrays.js
+fix_all_data_data.js
