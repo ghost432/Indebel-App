@@ -710,6 +710,29 @@ exports.getDemandesCountByMission = async (req, res, next) => {
 // Récupérer toutes les demandes (admin uniquement)
 exports.getAllDemandes = async (req, res, next) => {
   try {
+    // Auto-sync : copier automatiquement toute candidature présente dans `applications` mais pas dans `demandes_missions`
+    try {
+      await db.query(`
+        INSERT INTO demandes_missions (mission_id, mission_type, freelancer_id, employer_id, statut, message_freelancer, date_demande)
+        SELECT 
+          a.job_id, 
+          COALESCE(h.mission_type, f.mission_type, 'hourly'), 
+          a.freelancer_id, 
+          COALESCE(h.employer_id, f.employer_id, j.employer_id), 
+          a.statut, 
+          a.message, 
+          a.date_creation
+        FROM applications a
+        LEFT JOIN (SELECT id, employer_id, 'hourly' as mission_type FROM missions_forfait_horaire) h ON h.id = a.job_id
+        LEFT JOIN (SELECT id, employer_id, 'fixed' as mission_type FROM missions_forfait_fixe) f ON f.id = a.job_id
+        LEFT JOIN (SELECT id, employer_id FROM jobs) j ON j.id = a.job_id
+        LEFT JOIN demandes_missions dm ON dm.mission_id = a.job_id AND dm.freelancer_id = a.freelancer_id
+        WHERE dm.id IS NULL AND COALESCE(h.employer_id, f.employer_id, j.employer_id) IS NOT NULL
+      `);
+    } catch (syncErr) {
+      console.warn('⚠️ Auto-sync applications vers demandes_missions warning:', syncErr.message);
+    }
+
     const [demandes] = await db.query(
       `SELECT 
         d.*,
@@ -728,7 +751,7 @@ exports.getAllDemandes = async (req, res, next) => {
 
     // Récupérer les titres des missions
     for (let demande of demandes) {
-      let missionResult;
+      let missionResult = [];
       if (demande.is_freelancer_job) {
         [missionResult] = await db.query(
           `SELECT titre, statut FROM jobs_freelancer WHERE id = ?`,
@@ -736,12 +759,19 @@ exports.getAllDemandes = async (req, res, next) => {
         );
       } else {
         const tableName = demande.mission_type === 'hourly' ? 'missions_forfait_horaire' : 'missions_forfait_fixe';
-        [missionResult] = await db.query(
-          `SELECT titre, statut FROM ${tableName} WHERE id = ?`,
-          [demande.mission_id]
-        );
+        try {
+          [missionResult] = await db.query(
+            `SELECT titre, statut FROM ${tableName} WHERE id = ?`,
+            [demande.mission_id]
+          );
+        } catch (e) {
+          [missionResult] = await db.query(
+            `SELECT titre, statut FROM jobs WHERE id = ?`,
+            [demande.mission_id]
+          );
+        }
       }
-      demande.mission_titre = missionResult[0]?.titre || 'Mission supprimée';
+      demande.mission_titre = missionResult[0]?.titre || 'Mission Indebel';
       demande.mission_statut = missionResult[0]?.statut || null;
     }
 
