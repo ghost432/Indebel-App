@@ -556,8 +556,8 @@ exports.getMissionsDisponibles = async (req, res, next) => {
           AND mi.freelancer_id = ?
         WHERE m.statut = ? 
           AND mi.id IS NULL
-          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
-          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ? AND job_id IS NOT NULL)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ? AND mission_id IS NOT NULL)
         ORDER BY m.date_creation DESC
       `, [freelancer_id, 'ouvert', freelancer_id, freelancer_id]);
       hourly = hRows;
@@ -572,8 +572,8 @@ exports.getMissionsDisponibles = async (req, res, next) => {
           AND mi.freelancer_id = ?
         WHERE m.statut = ? 
           AND mi.id IS NULL
-          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
-          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ? AND job_id IS NOT NULL)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ? AND mission_id IS NOT NULL)
         ORDER BY m.date_creation DESC
       `, [freelancer_id, 'ouvert', freelancer_id, freelancer_id]);
       fixed = fRows;
@@ -595,8 +595,8 @@ exports.getMissionsDisponibles = async (req, res, next) => {
           AND mi.freelancer_id = ?
         WHERE j.statut = ? 
           AND mi.id IS NULL
-          AND j.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
-          AND j.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
+          AND j.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ? AND job_id IS NOT NULL)
+          AND j.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ? AND mission_id IS NOT NULL)
         ORDER BY j.date_creation DESC
       `, [freelancer_id, 'ouvert', freelancer_id, freelancer_id]);
       freelancerJobs = jRows;
@@ -607,8 +607,8 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         FROM missions_forfait_horaire m
         LEFT JOIN users u ON m.employer_id = u.id
         WHERE m.statut = 'ouvert'
-          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
-          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ? AND job_id IS NOT NULL)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ? AND mission_id IS NOT NULL)
         ORDER BY m.date_creation DESC
       `, [freelancer_id, freelancer_id]);
       hourly = hRows;
@@ -618,8 +618,8 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         FROM missions_forfait_fixe m
         LEFT JOIN users u ON m.employer_id = u.id
         WHERE m.statut = 'ouvert'
-          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
-          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ? AND job_id IS NOT NULL)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ? AND mission_id IS NOT NULL)
         ORDER BY m.date_creation DESC
       `, [freelancer_id, freelancer_id]);
       fixed = fRows;
@@ -636,8 +636,8 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         FROM jobs_freelancer j
         LEFT JOIN users u ON j.freelancer_id = u.id
         WHERE j.statut = 'ouvert'
-          AND j.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
-          AND j.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
+          AND j.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ? AND job_id IS NOT NULL)
+          AND j.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ? AND mission_id IS NOT NULL)
         ORDER BY j.date_creation DESC
       `, [freelancer_id, freelancer_id]);
       freelancerJobs = jRows;
