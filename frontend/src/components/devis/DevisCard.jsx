@@ -45,7 +45,7 @@ const DevisCard = ({
           <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-100">
             {demande.categorie || 'Demande de devis'}
           </p>
-          {demande.statut && (
+          {isAdmin && demande.statut && (
             <span className={`whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ring-1 ${statusClass[demande.statut] || 'bg-slate-50 text-slate-700 ring-slate-200'}`}>
               {statusLabel[demande.statut] || demande.statut}
             </span>

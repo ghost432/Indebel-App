@@ -37,6 +37,7 @@ const devisPublicRoutes = require('./routes/devisPublicRoutes');
 const avisRoutes = require('./routes/avisRoutes');
 const seoRoutes = require('./routes/seoRoutes');
 const dashboardStatsRoutes = require('./routes/dashboardStatsRoutes');
+const metierPageRoutes = require('./routes/metierPageRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -164,9 +165,18 @@ app.use(compression({
   }
 }));
 
-// Rate limiting (désactivé pour éviter les erreurs d'IP communes via proxy)
-// const limiter = rateLimit({ ... });
-// app.use('/api/', limiter);
+// Rate limiting ciblé pour la sécurité des routes d'authentification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limite à 30 requêtes par 15 minutes par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Trop de tentatives depuis cette adresse IP. Veuillez réessayer dans 15 minutes.'
+  }
+});
+app.use(['/api/auth/login', '/api/auth/register', '/api/auth/verify-otp', '/api/auth/forgot-password'], authLimiter);
 
 // Middleware de journalisation personnalisé
 app.use((req, res, next) => {
@@ -181,9 +191,28 @@ app.use((req, res, next) => {
 
 // Webhook Stripe - DOIT être AVANT express.json() pour avoir le raw body
 app.post('/api/paiements/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
-  console.log('Webhook Stripe reçu');
+  console.log('Webhook Stripe reçu (paiements)');
   next();
 }, require('./controllers/paiementController').stripeWebhook);
+
+// ALIAS: /api/paiement/webhook (singulier sans 's') - URL configurée par erreur dans Stripe Dashboard
+// Redirige vers le handler credits pour que les crédits soient bien attribués
+app.post('/api/paiement/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+  console.log('[ALIAS] Webhook Stripe /api/paiement/webhook -> credits handler');
+  next();
+}, require('./controllers/creditsController').webhook);
+
+// ALIAS: /api/pricing/webhook - autre URL Stripe erronée (détectée dans les logs nginx)
+app.post('/api/pricing/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+  console.log('[ALIAS] Webhook Stripe /api/pricing/webhook -> credits handler');
+  next();
+}, require('./controllers/creditsController').webhook);
+
+// Webhook Stripe Credits - DOIT être AVANT express.json() pour avoir le raw body
+app.post('/api/credits/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+  console.log('Webhook Stripe Credits reçu');
+  next();
+}, require('./controllers/creditsController').webhook);
 
 // Body parser avec limite augmentée pour les fichiers Base64
 app.use(express.json({ limit: '50mb' }));  // Augmenté de 100kb à 50mb
@@ -252,7 +281,14 @@ app.use('/api/freelancer-jobs', freelancerJobRoutes);
 app.use('/api/devis-public', devisPublicRoutes);
 app.use('/api/avis', avisRoutes);
 app.use('/api/seo', seoRoutes);
+app.use('/api/metiers', metierPageRoutes);
 app.use('/api/admin-stats', dashboardStatsRoutes);
+
+const creditsRoutes = require('./routes/creditsRoutes');
+app.use('/api/credits', creditsRoutes);
+
+const adminCreditsRoutes = require('./routes/adminCreditsRoutes');
+app.use('/api/admin-credits', adminCreditsRoutes);
 
 // Middleware de logging des erreurs
 app.use((err, req, res, next) => {

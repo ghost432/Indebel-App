@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../config';
 import Pagination from '../components/Pagination';
 import usePagination from '../hooks/usePagination';
 import ComparateurDevis from '../components/ComparateurDevis';
+import CreditUnlockGuard from '../components/CreditUnlockGuard';
 
 const EmployerDevisRecus = () => {
   const [devis, setDevis] = useState([]);
@@ -137,14 +138,12 @@ const EmployerDevisRecus = () => {
       header: 'Actions',
       render: (row) => (
         <div className="flex gap-2">
-          {/* Note: The route to view a specific devis doesn't exist yet, but it's typically a public route via token or an authenticated employer route */}
           <Button 
-            variant="outline" 
             size="sm" 
+            className="bg-[#df6422] hover:bg-[#c85317] text-white font-bold whitespace-nowrap shadow-sm text-xs px-3 py-1.5"
             onClick={() => setSelectedDevis(row)}
-            title="Voir le devis"
           >
-            <Eye className="w-4 h-4" />
+            👉 Cliquer ici pour accepter ou refuser
           </Button>
         </div>
       )
@@ -154,6 +153,7 @@ const EmployerDevisRecus = () => {
   if (loading) return <PageLoader />;
 
   return (
+    <CreditUnlockGuard action="view_devis_recus" storageKey="unlocked_devis_recus" title="les devis reçus">
     <div>
       <div className="bg-[#082151] rounded-[24px] shadow-md p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden text-white border-0">
         <div className="relative z-10 flex items-center gap-4">
@@ -306,6 +306,7 @@ const EmployerDevisRecus = () => {
         actionLoading={actionLoading}
       />
     </div>
+    </CreditUnlockGuard>
   );
 };
 

@@ -34,7 +34,6 @@ exports.createTicket = async (req, res, next) => {
 
     // Envoyer notification email aux admins
     try {
-      // we use the templates from email.js which are usually exported as emailTemplates
       const { emailTemplates } = require('../config/email');
       if (emailTemplates && emailTemplates.newSupportTicketAdmin) {
         await sendEmail(emailTemplates.newSupportTicketAdmin({
@@ -49,18 +48,38 @@ exports.createTicket = async (req, res, next) => {
       console.error('Erreur envoi email admin:', emailError);
     }
 
-    // Créer notification pour l'utilisateur
+    // 1. Notification de confirmation pour l'utilisateur
     await db.query(
       `INSERT INTO notifications (user_id, titre, message, type, lien)
              VALUES (?, ?, ?, ?, ?)`,
       [
         user_id,
-        '✅ Ticket créé',
-        `Votre ticket de support #${ticketId} a été créé. Notre équipe vous répondra sous peu.`,
+        '✅ Ticket support créé',
+        `Votre ticket de support #${ticketId} ("${sujet}") a été soumis. Notre équipe vous répondra rapidement.`,
         'success',
         `/support`
       ]
     );
+
+    // 2. Notification pour tous les administrateurs
+    try {
+      const [admins] = await db.query("SELECT id FROM users WHERE role = 'admin'");
+      for (const admin of admins) {
+        await db.query(
+          `INSERT INTO notifications (user_id, titre, message, type, lien)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            admin.id,
+            '🎫 Nouveau ticket support',
+            `Ticket #${ticketId} ("${sujet}") créé par ${user.prenom || user.nom || user.denomination || 'un utilisateur'}.`,
+            'info',
+            `/admin/tickets`
+          ]
+        );
+      }
+    } catch (adminNotifErr) {
+      console.error('Erreur notification admins ticket:', adminNotifErr);
+    }
 
     res.status(201).json({
       success: true,
@@ -294,62 +313,75 @@ exports.addResponse = async (req, res, next) => {
       );
     }
 
+    // Email notification
     try {
-      if (isAdmin || !isAdmin) { // Logic simplified for notification
+      if (isAdmin) {
         const [recipient] = await db.query(
           'SELECT email, nom, prenom, denomination FROM users WHERE id = ?',
-          [isAdmin ? ticket.user_id : ticket.user_id] // Simplified
+          [ticket.user_id]
         );
-
-        if (isAdmin) {
+        if (recipient.length > 0) {
           await sendEmail({
             to: recipient[0].email,
             subject: `💬 Réponse à votre ticket #${id}`,
             html: `
-                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #667eea;">Nouvelle réponse à votre ticket</h2>
-                                <p>Bonjour ${recipient[0].prenom || recipient[0].denomination},</p>
-                                <p>Notre équipe support a répondu à votre ticket <strong>#${id}</strong> : ${ticket.sujet}</p>
-                                <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                                    <p style="white-space: pre-wrap; color: #1f2937;">${message}</p>
-                                </div>
-                                <div style="text-align: center; margin: 30px 0;">
-                                    <a href="${process.env.FRONTEND_URL}/support/${id}" 
-                                       style="display: inline-block; background-color: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                                        Voir le ticket
-                                    </a>
-                                </div>
-                                <p>Cordialement,<br/>L'équipe Indebel</p>
-                            </div>
-                        `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #667eea;">Nouvelle réponse à votre ticket</h2>
+                <p>Bonjour ${recipient[0].prenom || recipient[0].denomination || 'utilisateur'},</p>
+                <p>Notre équipe support a répondu à votre ticket <strong>#${id}</strong> : ${ticket.sujet}</p>
+                <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="white-space: pre-wrap; color: #1f2937;">${message}</p>
+                </div>
+                <p>Cordialement,<br/>L'équipe Indebel</p>
+              </div>
+            `
           });
-        } else {
-          const [admins] = await db.query("SELECT email FROM users WHERE role = 'admin'");
-          for (const admin of admins) {
-            await sendEmail({
-              to: admin.email,
-              subject: `💬 Nouvelle réponse au ticket #${id}`,
-              html: `<p>L'utilisateur a répondu au ticket <strong>#${id}</strong></p>`
-            });
-          }
+        }
+      } else {
+        const [admins] = await db.query("SELECT email FROM users WHERE role = 'admin'");
+        for (const admin of admins) {
+          await sendEmail({
+            to: admin.email,
+            subject: `💬 Nouvelle réponse au ticket #${id}`,
+            html: `<p>L'utilisateur a répondu au ticket <strong>#${id}</strong></p>`
+          });
         }
       }
     } catch (emailError) {
       console.error('Erreur envoi email:', emailError);
     }
 
-    const notifUserId = isAdmin ? ticket.user_id : user_id;
-    await db.query(
-      `INSERT INTO notifications (user_id, titre, message, type, lien)
-             VALUES (?, ?, ?, ?, ?)`,
-      [
-        notifUserId,
-        isAdmin ? '💬 Réponse à votre ticket' : '💬 Message envoyé',
-        isAdmin ? `Notre équipe a répondu à votre ticket #${id}` : `Votre message a été envoyé`,
-        'info',
-        isAdmin ? `/support/${id}` : `/admin/support/${id}`
-      ]
-    );
+    // DB Notifications configuration
+    if (isAdmin) {
+      // Admin responded -> Notify user
+      await db.query(
+        `INSERT INTO notifications (user_id, titre, message, type, lien)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          ticket.user_id,
+          '💬 Réponse à votre ticket',
+          `Notre équipe support a répondu à votre ticket #${id} ("${ticket.sujet}").`,
+          'info',
+          `/support`
+        ]
+      );
+    } else {
+      // User responded -> Notify all admins
+      const [admins] = await db.query("SELECT id FROM users WHERE role = 'admin'");
+      for (const admin of admins) {
+        await db.query(
+          `INSERT INTO notifications (user_id, titre, message, type, lien)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            admin.id,
+            '💬 Nouvelle réponse ticket',
+            `L'utilisateur a répondu sur le ticket #${id} ("${ticket.sujet}").`,
+            'info',
+            `/admin/tickets`
+          ]
+        );
+      }
+    }
 
     res.json({ success: true, message: 'Réponse ajoutée', data: { statut: newStatut } });
   } catch (error) {
@@ -369,6 +401,28 @@ exports.updateTicketStatus = async (req, res, next) => {
              WHERE id = ?`,
       [statut, admin_id || null, id]
     );
+
+    // Notify user of status update
+    try {
+      const [tickets] = await db.query('SELECT user_id, sujet FROM support_tickets WHERE id = ?', [id]);
+      if (tickets.length > 0) {
+        const ticket = tickets[0];
+        const statusLabel = statut === 'resolu' ? 'résolu' : statut === 'ferme' ? 'clôturé' : statut;
+        await db.query(
+          `INSERT INTO notifications (user_id, titre, message, type, lien)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            ticket.user_id,
+            '📌 Statut de ticket mis à jour',
+            `Votre ticket #${id} ("${ticket.sujet}") a été marqué comme ${statusLabel}.`,
+            'info',
+            `/support`
+          ]
+        );
+      }
+    } catch (notifErr) {
+      console.error('Erreur notification maj statut ticket:', notifErr);
+    }
 
     res.json({ success: true, message: 'Statut mis à jour' });
   } catch (error) {

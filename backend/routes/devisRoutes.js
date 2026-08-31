@@ -12,6 +12,7 @@ router.get('/public/:id', devisController.getPublicDemandeById);
 
 // Routes authentifiées
 router.get('/mes-demandes', authenticate, devisController.getMesDemandes);
+router.put('/:id/terminer', authenticate, devisController.marquerTerminee);
 
 // Routes admin
 router.get('/stats', authenticate, isAdmin, devisController.getDevisStats);

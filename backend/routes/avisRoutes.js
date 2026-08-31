@@ -10,6 +10,7 @@ router.get('/freelancers', avisController.listFreelancers);
 router.get('/freelancer/:freelancer_id', avisController.getFreelancerAvis);
 // Soumettre un avis (particulier - pas besoin d'être connecté)
 router.post('/create', avisController.createAvis);
+router.post('/', avisController.createAvis);
 // Avis reçus par le prestataire connecté
 router.get('/me', authenticate, authorize('freelancer'), avisController.getMyAvis);
 

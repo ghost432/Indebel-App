@@ -546,7 +546,7 @@ exports.getMissionsDisponibles = async (req, res, next) => {
     let freelancerJobs = [];
 
     try {
-      // Intent: Récupérer les missions taux horaire non ignorées
+      // Intent: Récupérer les missions taux horaire non ignorées et non postulées
       const [hRows] = await db.query(`
         SELECT m.*, u.denomination, u.nom, u.prenom, 'hourly' as mission_type
         FROM missions_forfait_horaire m
@@ -554,12 +554,15 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         LEFT JOIN missions_ignorees mi ON mi.mission_id = m.id 
           AND mi.mission_type = 'hourly' 
           AND mi.freelancer_id = ?
-        WHERE m.statut = ? AND mi.id IS NULL
+        WHERE m.statut = ? 
+          AND mi.id IS NULL
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
         ORDER BY m.date_creation DESC
-      `, [freelancer_id, 'ouvert']);
+      `, [freelancer_id, 'ouvert', freelancer_id, freelancer_id]);
       hourly = hRows;
 
-      // Intent: Récupérer les missions fixes non ignorées
+      // Intent: Récupérer les missions fixes non ignorées et non postulées
       const [fRows] = await db.query(`
         SELECT m.*, u.denomination, u.nom, u.prenom, 'fixed' as mission_type
         FROM missions_forfait_fixe m
@@ -567,12 +570,15 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         LEFT JOIN missions_ignorees mi ON mi.mission_id = m.id 
           AND mi.mission_type = 'fixed' 
           AND mi.freelancer_id = ?
-        WHERE m.statut = ? AND mi.id IS NULL
+        WHERE m.statut = ? 
+          AND mi.id IS NULL
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
         ORDER BY m.date_creation DESC
-      `, [freelancer_id, 'ouvert']);
+      `, [freelancer_id, 'ouvert', freelancer_id, freelancer_id]);
       fixed = fRows;
 
-      // Intent: Récupérer les missions de prestataires non ignorées
+      // Intent: Récupérer les missions de prestataires non ignorées et non postulées
       const [jRows] = await db.query(`
         SELECT j.id, j.titre, j.description, j.secteur as categorie,
                j.type_mission, j.competences_requises as competences, 
@@ -587,9 +593,12 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         LEFT JOIN missions_ignorees mi ON mi.mission_id = j.id 
           AND mi.mission_type = j.type_forfait
           AND mi.freelancer_id = ?
-        WHERE j.statut = ? AND mi.id IS NULL
+        WHERE j.statut = ? 
+          AND mi.id IS NULL
+          AND j.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
+          AND j.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
         ORDER BY j.date_creation DESC
-      `, [freelancer_id, 'ouvert']);
+      `, [freelancer_id, 'ouvert', freelancer_id, freelancer_id]);
       freelancerJobs = jRows;
     } catch (dbErr) {
       console.warn('⚠️ Requête missions_ignorees a échoué, exécution du fallback sans table mi:', dbErr.message);
@@ -598,8 +607,10 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         FROM missions_forfait_horaire m
         LEFT JOIN users u ON m.employer_id = u.id
         WHERE m.statut = 'ouvert'
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
         ORDER BY m.date_creation DESC
-      `);
+      `, [freelancer_id, freelancer_id]);
       hourly = hRows;
 
       const [fRows] = await db.query(`
@@ -607,8 +618,10 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         FROM missions_forfait_fixe m
         LEFT JOIN users u ON m.employer_id = u.id
         WHERE m.statut = 'ouvert'
+          AND m.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
+          AND m.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
         ORDER BY m.date_creation DESC
-      `);
+      `, [freelancer_id, freelancer_id]);
       fixed = fRows;
 
       const [jRows] = await db.query(`
@@ -623,8 +636,10 @@ exports.getMissionsDisponibles = async (req, res, next) => {
         FROM jobs_freelancer j
         LEFT JOIN users u ON j.freelancer_id = u.id
         WHERE j.statut = 'ouvert'
+          AND j.id NOT IN (SELECT job_id FROM applications WHERE freelancer_id = ?)
+          AND j.id NOT IN (SELECT mission_id FROM demandes_missions WHERE freelancer_id = ?)
         ORDER BY j.date_creation DESC
-      `);
+      `, [freelancer_id, freelancer_id]);
       freelancerJobs = jRows;
     }
 

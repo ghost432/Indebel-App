@@ -835,49 +835,51 @@ Renvoie UNIQUEMENT un objet JSON valide avec une seule propriété "message_free
   "message_freelancer": "Bonjour,\\n\\nJe suis très intéressé par votre mission..."
 }`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    let message_freelancer = `Bonjour,\n\nJe suis particulièrement intéressé(e) par votre mission "${mission.titre || 'Prestation'}". Fort(e) de mes compétences dans ce domaine (${freelancer.competences || 'expertise qualifiée'}), je serais ravi(e) de mettre mon savoir-faire au service de votre projet.\n\nJe reste à votre entière disposition pour échanger sur vos besoins et convenir des modalités d'exécution.\n\nCordialement,\n${providerName}`;
 
-    const aiRes = await fetch('https://ai.lestagiaire.be/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + Buffer.from('admin:QmO2u1QfB99Zloha4Q').toString('base64')
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: 'cv-ai',
-        messages: [{ role: 'user', content: promptText }],
-        temperature: 0.7
-      })
-    });
-    clearTimeout(timeoutId);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
-    const aiData = await aiRes.json();
-    let message_freelancer = "Bonjour,\n\nJe suis très intéressé(e) par votre mission et j'ai l'expérience requise pour la mener à bien. N'hésitez pas à me contacter pour en discuter.\n\nCordialement.";
+      const aiRes = await fetch('https://ai.lestagiaire.be/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + Buffer.from('admin:QmO2u1QfB99Zloha4Q').toString('base64')
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: 'cv-ai',
+          messages: [{ role: 'user', content: promptText }],
+          temperature: 0.7
+        })
+      });
+      clearTimeout(timeoutId);
 
-    if (aiData && aiData.choices && aiData.choices[0] && aiData.choices[0].message) {
-      const content = aiData.choices[0].message.content || '';
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          const resultJson = JSON.parse(jsonMatch[0]);
-          if (resultJson.message_freelancer) {
-            message_freelancer = resultJson.message_freelancer;
+      const aiData = await aiRes.json();
+
+      if (aiData && aiData.choices && aiData.choices[0] && aiData.choices[0].message) {
+        const content = aiData.choices[0].message.content || '';
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const resultJson = JSON.parse(jsonMatch[0]);
+            if (resultJson.message_freelancer) {
+              message_freelancer = resultJson.message_freelancer;
+            }
+          } catch (e) {
+            console.error("JSON parse error:", e);
           }
-        } catch (e) {
-          console.error("JSON parse error:", e);
         }
       }
+    } catch (aiErr) {
+      console.warn('AI API indisponible ou timeout pour candidature, utilisation du modèle contextuel:', aiErr.message);
     }
 
     // Incrémenter le compteur IA
     await incrementAiCandidatureCounter(freelancerId);
 
-    const disclaimerText = "\n\nLe montant indiqué est une estimation. Un devis définitif pourra être établi uniquement après une visite sur place, afin d'évaluer précisément les travaux à réaliser.\n\nJe reste à votre disposition pour convenir d'un rendez-vous.";
-    message_freelancer += disclaimerText;
-
-    res.json({
+    return res.json({
       success: true,
       data: {
         message_freelancer
@@ -885,9 +887,6 @@ Renvoie UNIQUEMENT un objet JSON valide avec une seule propriété "message_free
     });
 
   } catch (error) {
-    if (error.name === 'AbortError') {
-      return res.status(504).json({ success: false, message: 'Le service IA a mis trop de temps à répondre.' });
-    }
     console.error('Erreur génération IA candidature:', error);
     next(error);
   }

@@ -9,10 +9,12 @@ router.post('/conversations', authenticate, messageController.createOrGetConvers
 // Récupérer les conversations de l'utilisateur
 router.get('/conversations', authenticate, messageController.getUserConversations);
 
-// Récupérer les messages d'une conversation
+// Récupérer les messages d'une conversation (deux formats supportés)
 router.get('/conversations/:conversationId', authenticate, messageController.getConversationMessages);
+router.get('/:conversationId', authenticate, messageController.getConversationMessages);
 
-// Envoyer un message
+// Envoyer un message (deux formats supportés)
 router.post('/conversations/:conversationId/messages', authenticate, messageController.sendMessage);
+router.post('/:conversationId', authenticate, messageController.sendMessage);
 
 module.exports = router;

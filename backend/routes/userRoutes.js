@@ -40,31 +40,6 @@ const { getEffectiveForfait } = require('../services/devisViewLimitService');
 router.get('/', authenticate, async (req, res, next) => {
   // Autoriser les admins, employeurs et freelancers à voir la liste des utilisateurs
   if (req.user.role === 'admin' || req.user.role === 'employer' || req.user.role === 'freelancer') {
-    
-    // Check if the user's forfait allows them to view the requested list
-    if (req.user.role !== 'admin') {
-      const forfait = await getEffectiveForfait(req.user.id);
-      
-      // If a freelancer tries to view employers list
-      if (req.user.role === 'freelancer' && Number(forfait?.liste_employeurs ?? 0) === 0) {
-        return res.status(403).json({ 
-          success: false, 
-          code: 'LIST_ACCESS_DENIED',
-          message: `Votre forfait ${forfait?.nom || ''} ne permet pas de voir la liste des recruteurs. Veuillez mettre à jour votre forfait.` 
-        });
-      }
-      
-      // If an employer tries to view freelancers list (when role is explicitly requested or implicitly default for employer viewing)
-      const requestedRole = req.query.role;
-      if (req.user.role === 'employer' && (!requestedRole || requestedRole === 'freelancer') && Number(forfait?.liste_freelancers ?? 0) === 0) {
-        return res.status(403).json({ 
-          success: false, 
-          code: 'LIST_ACCESS_DENIED',
-          message: `Votre forfait ${forfait?.nom || ''} ne permet pas de voir la liste des prestataires. Veuillez mettre à jour votre forfait.` 
-        });
-      }
-    }
-
     // Si c'est un freelancer, on filtre pour ne renvoyer que les employeurs
     if (req.user.role === 'freelancer') {
       req.query.role = 'employer';
@@ -79,8 +54,11 @@ router.delete('/:id', authenticate, authorize('admin'), userController.deleteUse
 router.put('/employers/verify-all', authenticate, authorize('admin'), userController.verifyAllEmployers);
 router.put('/employers/verify-all-and-set-image', authenticate, authorize('admin'), userController.verifyAllEmployersAndSetImage);
 
+// Routes statiques PUT
+router.put('/profile', authenticate, userController.updateUser);
+router.put('/change-password', authenticate, userController.changePassword);
+
 // Routes avec paramètres (après les routes statiques)
-router.get('/:employerId/published-missions', userController.getPublishedMissions);
 router.get('/:id/completed-missions', userController.getFreelancerCompletedMissions);
 router.get('/:id/published-missions', userController.getEmployerPublishedMissions);
 
@@ -88,6 +66,5 @@ router.get('/:id/published-missions', userController.getEmployerPublishedMission
 router.get('/:id', authenticate, userController.getUserById);
 router.post('/:id/prolonge-forfait', authenticate, authorize('admin'), userController.prolongeForfait);
 router.put('/:id', authenticate, authorize('admin', 'employer', 'freelancer'), userController.updateUser);
-router.put('/change-password', authenticate, userController.changePassword);
 
 module.exports = router;

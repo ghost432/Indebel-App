@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { sendEmail, emailTemplates } = require('../config/email');
+const { sendPushNotification } = require('./pushService');
 
 /**
  * Service de gestion des notifications
@@ -27,7 +28,10 @@ const notificationService = {
     'application_received',
     'mission_ignored',
     'application_accepted',
-    'application_accepted_by_employer'
+    'application_accepted_by_employer',
+    'credit_update',
+    'free_credits_gift',
+    'welcome_credits'
   ]),
 
   normalizeType(type) {
@@ -58,6 +62,14 @@ const notificationService = {
         'INSERT INTO notifications (user_id, type, titre, message, lien) VALUES (?, ?, ?, ?, ?)',
         [userId, safeType, titre, message, lien]
       );
+
+      // Déclenchement automatique de la notification push mobile
+      try {
+        sendPushNotification(userId, titre, message, { lien, type: safeType });
+      } catch (pushErr) {
+        console.error('Erreur déclenchement push automatique:', pushErr);
+      }
+
       return result.insertId;
     } catch (error) {
       console.error('Erreur création notification:', error);

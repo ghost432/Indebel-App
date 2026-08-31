@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { User, Mail, Briefcase, Calendar, Camera, Globe, FileText, Languages, Building2, AlertTriangle } from 'lucide-react';
+import { User, Mail, Briefcase, Calendar, Camera, Globe, FileText, Languages, Building2, AlertTriangle, Coins } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import VerificationBadge from '../components/VerificationBadge';
 import { useAuth } from '../context/AuthContext';
@@ -404,13 +404,10 @@ const FreelancerProfile = () => {
                           />
                         </div>
                       </div>
-                      {user?.forfait_nom && (
-                      <span 
-                        className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-800"
-                      >
-                        {user.forfait_nom === 'Gratuit' ? 'Forfait Gratuit' : user.forfait_nom}
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 shadow-sm flex items-center gap-1.5 mt-1">
+                        <Coins className="w-3.5 h-3.5 text-amber-500" />
+                        Solde : {user?.solde_credits || 0} Crédits
                       </span>
-                    )}
                     </div>
                     <div className="flex justify-center mb-4">
                       {getRoleBadge()}

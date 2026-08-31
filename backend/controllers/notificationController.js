@@ -6,28 +6,30 @@ const notificationService = require('../services/notificationService');
 exports.getUserNotifications = async (req, res, next) => {
   try {
     const user_id = req.user.id;
-    const { limit = 50, offset = 0 } = req.query;
+    const limitVal = Math.max(1, parseInt(req.query.limit, 10) || 50);
+    const offsetVal = Math.max(0, parseInt(req.query.offset, 10) || 0);
 
     const [notifications] = await db.query(
       `SELECT * FROM notifications 
        WHERE user_id = ? 
        ORDER BY date_creation DESC 
-       LIMIT ? OFFSET ?`,
-      [user_id, parseInt(limit), parseInt(offset)]
+       LIMIT ${limitVal} OFFSET ${offsetVal}`,
+      [user_id]
     );
 
     const [countResult] = await db.query(
-      'SELECT COUNT(*) as total, SUM(lu = 0) as non_lues FROM notifications WHERE user_id = ?',
+      'SELECT COUNT(*) as total, COALESCE(SUM(CASE WHEN lu = 0 OR lu = FALSE THEN 1 ELSE 0 END), 0) as non_lues FROM notifications WHERE user_id = ?',
       [user_id]
     );
 
     res.json({
       success: true,
       data: notifications,
-      total: countResult[0].total,
-      non_lues: countResult[0].non_lues || 0
+      total: countResult[0]?.total || 0,
+      non_lues: parseInt(countResult[0]?.non_lues, 10) || 0
     });
   } catch (error) {
+    console.error('Erreur getUserNotifications:', error);
     next(error);
   }
 };
@@ -482,3 +484,21 @@ exports.getNewsletters = async (req, res, next) => {
     next(error);
   }
 };
+
+// Enregistrer le push token Expo d'un utilisateur
+exports.savePushToken = async (req, res, next) => {
+  try {
+    const { push_token } = req.body;
+    const user_id = req.user.id;
+
+    if (!push_token) {
+      return res.status(400).json({ success: false, message: 'Le push_token est requis' });
+    }
+
+    await db.query('UPDATE users SET push_token = ? WHERE id = ?', [push_token, user_id]);
+    res.json({ success: true, message: 'Push token enregistré avec succès' });
+  } catch (error) {
+    next(error);
+  }
+};
+

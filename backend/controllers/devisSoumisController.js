@@ -156,7 +156,10 @@ exports.notifierFreelancersQualifies = async (req, res) => {
 
     // Vérifier que la demande est validée
     const [demande] = await db.query(
-      'SELECT * FROM demandes_devis WHERE id = ? AND statut IN ("valide", "traite", "devis_complet")',
+      `SELECT * FROM demandes_devis
+       WHERE id = ?
+       AND statut IN ('valide', 'traite', 'devis_complet')
+       AND date_validation IS NOT NULL`,
       [demandeId]
     );
 
@@ -245,7 +248,7 @@ exports.getDemandesDisponibles = async (req, res) => {
   try {
     const freelancerId = req.user.id;
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit) || 20);
+    const limit = Math.max(1, parseInt(req.query.limit) || 25);
     const offset = (page - 1) * limit;
 
     // Étape 1: Récupérer seulement les IDs pour le tri et le filtrage (léger)
@@ -254,20 +257,12 @@ exports.getDemandesDisponibles = async (req, res) => {
         dd.id
       FROM demandes_devis dd
       WHERE dd.statut IN ('valide', 'traite', 'devis_complet')
+      AND dd.date_validation IS NOT NULL
       AND NOT EXISTS (
         SELECT 1 FROM devis_soumis ds WHERE ds.demande_devis_id = dd.id AND ds.freelancer_id = ?
       )
-      AND (
-        dd.statut IN ('valide', 'traite')
-        OR EXISTS (
-          SELECT 1
-          FROM devis_notifications dn
-          WHERE dn.demande_devis_id = dd.id
-          AND dn.freelancer_id = ?
-        )
-      )
       ORDER BY dd.created_at DESC
-    `, [freelancerId, freelancerId]);
+    `, [freelancerId]);
 
     const total = ids.length;
 
@@ -310,8 +305,9 @@ exports.getDemandesDisponibles = async (req, res) => {
         dd.code_postal,
         dd.ville,
         dd.region,
-        NULL as prenom,
-        NULL as nom,
+        COALESCE(u.prenom, dd.prenom) as prenom,
+        COALESCE(u.nom, dd.nom) as nom,
+        u.denomination,
         NULL as email,
         NULL as telephone,
         dd.date_souhaite,
@@ -335,6 +331,7 @@ exports.getDemandesDisponibles = async (req, res) => {
           AND ds_mine.freelancer_id = ?
         ) as deja_soumis
       FROM demandes_devis dd
+      LEFT JOIN users u ON dd.email = u.email
       WHERE dd.id IN (?)
       ORDER BY dd.created_at DESC
     `, [freelancerId, pagedIds]);
@@ -387,10 +384,14 @@ exports.getDemandeByIdForFreelancer = async (req, res) => {
         dd.code_postal,
         dd.ville,
         dd.region,
-        dd.prenom,
-        dd.nom,
-        dd.email,
-        dd.telephone,
+        COALESCE(dd.prenom, emp.prenom) as prenom,
+        COALESCE(dd.nom, emp.nom) as nom,
+        COALESCE(dd.email, emp.email) as email,
+        COALESCE(dd.telephone, emp.telephone) as telephone,
+        emp.denomination,
+        emp.photo,
+        emp.avatar,
+        emp.statut_kyc,
         dd.date_souhaite,
         dd.heure_souhaite,
         dd.budget_estime,
@@ -406,18 +407,11 @@ exports.getDemandeByIdForFreelancer = async (req, res) => {
           AND ds_mine.freelancer_id = ?
         ) as deja_soumis
       FROM demandes_devis dd
+      LEFT JOIN users emp ON dd.email = emp.email
       WHERE dd.id = ? 
       AND dd.statut IN ('valide', 'traite', 'devis_complet')
-      AND (
-        dd.statut IN ('valide', 'traite')
-        OR EXISTS (
-          SELECT 1
-          FROM devis_notifications dn
-          WHERE dn.demande_devis_id = dd.id
-          AND dn.freelancer_id = ?
-        )
-      )
-    `, [freelancerId, id, freelancerId]);
+      AND dd.date_validation IS NOT NULL
+    `, [freelancerId, id]);
 
     if (demandes.length === 0) {
       return res.status(404).json({
@@ -481,7 +475,7 @@ exports.generateAIDevis = async (req, res) => {
       });
     }
 
-    if (demande.statut !== 'valide') {
+    if (demande.statut !== 'valide' || !demande.date_validation) {
       return res.status(409).json({
         success: false,
         code: 'DEVIS_NOT_AVAILABLE',
@@ -489,18 +483,18 @@ exports.generateAIDevis = async (req, res) => {
       });
     }
 
-    const forfait = await getEffectiveForfait(freelancerId);
-    if (forfait) {
-      const compteur_devis_ia = await getMonthlyAiCounter(freelancerId);
-      const limit = forfait.limite_devis_ia;
-      
-      if (limit !== null && compteur_devis_ia >= limit) {
-        return res.status(403).json({
-          success: false,
-          code: 'DEVIS_IA_LIMIT_REACHED',
-          message: `Limite de devis par IA atteinte (${compteur_devis_ia}/${limit}). Veuillez changer de forfait pour en générer plus.`
-        });
-      }
+    const [settingsRows] = await db.query('SELECT setting_value FROM site_settings WHERE setting_key = "cout_devis_ia"');
+    const cout_devis_ia = settingsRows.length > 0 ? parseInt(settingsRows[0].setting_value, 10) : 2;
+
+    const [userRows] = await db.query('SELECT solde_credits FROM users WHERE id = ?', [freelancerId]);
+    const solde_credits = userRows.length > 0 ? userRows[0].solde_credits : 0;
+
+    if (solde_credits < cout_devis_ia) {
+      return res.status(403).json({
+        success: false,
+        code: 'INSUFFICIENT_CREDITS',
+        message: `Crédits insuffisants. Vous avez besoin de ${cout_devis_ia} crédits pour générer un devis avec l'IA. Veuillez recharger votre portefeuille.`
+      });
     }
 
     const [freelancers] = await db.query(
@@ -554,7 +548,7 @@ Renvoie UNIQUEMENT un objet JSON valide suivant exactement la structure ci-desso
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
       const aiRes = await fetch('https://ai.lestagiaire.be/v1/chat/completions', {
         method: 'POST',
@@ -588,16 +582,15 @@ Renvoie UNIQUEMENT un objet JSON valide suivant exactement la structure ci-desso
 
       const tvaAmt = Math.round((ht * tvaRate / 100) * 100) / 100;
       const ttc = Math.round((ht + tvaAmt) * 100) / 100;
+      const delaiVal = resultJson?.delai_realisation || `Exécution avant le ${dateSouhaiteFormated}`;
       const disclaimerText = "\n\nLe montant indiqué est une estimation. Un devis définitif pourra être établi uniquement après une visite sur place, afin d'évaluer précisément les travaux à réaliser.\n\nJe reste à votre disposition pour convenir d'un rendez-vous.";
       
       let description = resultJson?.description || `Proposition de devis professionnel rédigée pour le projet : ${demande.type_travaux || 'Prestation'}.\n\nSuite à votre demande de devis soumise le ${dateDemandeFormated}, nous vous soumettons l'offre ci-après :\n\n- Phase 1 : Étude technique et installation sur site.\n- Phase 2 : Réalisation complète du projet sur mesure conformément à votre cahier des charges (${demande.description || 'Prestation sur mesure'}).\n- Phase 3 : Contrôle qualité final et livraison pour la date butoir souhaitée du ${dateSouhaiteFormated}.\n\nLe montant s'élève à ${ht.toFixed(2)} € HT (TVA ${tvaRate}% en vigueur en Belgique).`;
       description += disclaimerText;
 
-      // Increment the compteur devis IA for the user
-      await db.query(
-        'UPDATE users SET compteur_devis_ia = compteur_devis_ia + 1 WHERE id = ?',
-        [freelancerId]
-      );
+      // Deduct credits and log
+      await db.query('UPDATE users SET solde_credits = solde_credits - ? WHERE id = ?', [cout_devis_ia, freelancerId]);
+      await db.query('INSERT INTO historique_credits (user_id, type, montant, description) VALUES (?, "depense", ?, "Génération de devis par IA")', [freelancerId, cout_devis_ia]);
 
       return res.json({
         success: true,
@@ -606,7 +599,7 @@ Renvoie UNIQUEMENT un objet JSON valide suivant exactement la structure ci-desso
           taux_tva: tvaRate,
           montant_tva: tvaAmt,
           montant_ttc: ttc,
-          delai_realisation: delai,
+          delai_realisation: delaiVal,
           description: description
         }
       });
@@ -622,11 +615,9 @@ Renvoie UNIQUEMENT un objet JSON valide suivant exactement la structure ci-desso
       let fallbackDesc = `${providerName.toUpperCase()}\n\nProjet : ${demande.type_travaux || 'Prestation de service'}\nLieu d'intervention : ${demande.ville || 'Belgique'} ${demande.code_postal ? '(' + demande.code_postal + ')' : ''}\n\nSuite à votre demande de devis déposée le ${dateDemandeFormated} pour le besoin suivant :\n"${demande.description || 'Non spécifié'}"\n\nNous vous proposons l'offre ci-dessous, avec une exécution planifiée pour respecter votre date souhaitée du ${dateSouhaiteFormated}.\n\nPrestations :\n- Réalisation conforme à votre demande initiale.\n${customConsignes}\n\nGaranties & Livraison :\n- Contrôle qualité final et nettoyage.\n- Exécution complète garantie avant le ${dateSouhaiteFormated}.\n\nMontant Total HT : ${ht.toFixed(2)} €\nTVA (${tvaRate}%) : ${tvaAmt.toFixed(2)} €\nTotal TTC : ${ttc.toFixed(2)} €`;
       fallbackDesc += "\n\nLe montant indiqué est une estimation. Un devis définitif pourra être établi uniquement après une visite sur place, afin d'évaluer précisément les travaux à réaliser.\n\nJe reste à votre disposition pour convenir d'un rendez-vous.";
 
-      // Increment the compteur devis IA for the user
-      await db.query(
-        'UPDATE users SET compteur_devis_ia = compteur_devis_ia + 1 WHERE id = ?',
-        [freelancerId]
-      );
+      // Deduct credits and log
+      await db.query('UPDATE users SET solde_credits = solde_credits - ? WHERE id = ?', [cout_devis_ia, freelancerId]);
+      await db.query('INSERT INTO historique_credits (user_id, type, montant, description) VALUES (?, "depense", ?, "Génération de devis (fallback IA)")', [freelancerId, cout_devis_ia]);
 
       return res.json({
         success: true,
@@ -699,7 +690,10 @@ exports.soumettreDevis = async (req, res) => {
 
     // Vérifier que la demande existe et est validée
     const [demande] = await db.query(
-      'SELECT * FROM demandes_devis WHERE id = ? AND statut IN ("valide", "traite", "devis_complet")',
+      `SELECT * FROM demandes_devis
+       WHERE id = ?
+       AND statut IN ('valide', 'traite', 'devis_complet')
+       AND date_validation IS NOT NULL`,
       [demande_devis_id]
     );
 
@@ -762,6 +756,21 @@ exports.soumettreDevis = async (req, res) => {
       });
     }
 
+    // Checking Credits
+    const [settingsRows] = await db.query('SELECT setting_value FROM site_settings WHERE setting_key = "cout_devis_manuel"');
+    const cout_devis_manuel = settingsRows.length > 0 ? parseInt(settingsRows[0].setting_value, 10) : 1;
+
+    const [userRows] = await db.query('SELECT solde_credits FROM users WHERE id = ?', [freelancerId]);
+    const solde_credits = userRows.length > 0 ? userRows[0].solde_credits : 0;
+
+    if (solde_credits < cout_devis_manuel) {
+      return res.status(403).json({
+        success: false,
+        code: 'INSUFFICIENT_CREDITS',
+        message: `Crédits insuffisants. Vous avez besoin de ${cout_devis_manuel} crédits pour soumettre ce devis. Veuillez recharger votre portefeuille.`
+      });
+    }
+
     // Vérifier que le freelancer n'a pas déjà soumis un devis
     const [existing] = await db.query(
       'SELECT id FROM devis_soumis WHERE demande_devis_id = ? AND freelancer_id = ?',
@@ -819,6 +828,12 @@ exports.soumettreDevis = async (req, res) => {
       );
     }
 
+    // Deduct credits and log
+    if (cout_devis_manuel > 0) {
+      await db.query('UPDATE users SET solde_credits = solde_credits - ? WHERE id = ?', [cout_devis_manuel, freelancerId]);
+      await db.query(`INSERT INTO historique_credits (user_id, type, montant, description) VALUES (?, "depense", ?, "Soumission d'un devis")`, [freelancerId, cout_devis_manuel]);
+    }
+
     // Infos du freelancer
     const [freelancer] = await db.query(
       'SELECT nom, prenom, email, telephone, denomination FROM users WHERE id = ?',
@@ -829,109 +844,108 @@ exports.soumettreDevis = async (req, res) => {
     const providerDisplayName = freelancerData.denomination || `${freelancerData.prenom || ''} ${freelancerData.nom || ''}`.trim() || 'Prestataire Indebel';
 
     // Base URL pour la réponse du client
-    const baseUrl = 'https://indebel.be';
-    const acceptUrl = `${baseUrl}/reponse-devis?token=${tokenAction}&action=accepter`;
-    const refuseUrl = `${baseUrl}/reponse-devis?token=${tokenAction}&action=refuser`;
-
-    // 1. Email confirmation au freelancer
-    try {
-      await sendEmail({
-        to: freelancerData.email,
-        subject: `✅ Votre devis (${ttcVal > 0 ? ttcVal.toFixed(2) + ' € TTC' : 'Soumis'}) a été envoyé au client`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <div style="background: #2b4eef; padding: 24px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 24px; font-weight: 900;">INDEBEL</h1>
-              <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Confirmation d'envoi</p>
-            </div>
-            
-            <div style="padding: 30px; background: #ffffff;">
-              <h2 style="color: #2b4eef; margin-top: 0;">Bonjour ${freelancerData.prenom},</h2>
-              <p>Félicitations ! Votre devis pour la demande <strong>"${demandeData.type_travaux}"</strong> a été transmis avec succès au client.</p>
+        // Send emails asynchronously (non-blocking) to ensure instant response to client
+    (async () => {
+      // 1. Email confirmation au freelancer
+      try {
+        await sendEmail({
+          to: freelancerData.email,
+          subject: `✅ Votre devis (${ttcVal > 0 ? ttcVal.toFixed(2) + ' € TTC' : 'Soumis'}) a été envoyé au client`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="background: #2b4eef; padding: 24px; text-align: center; color: white;">
+                <h1 style="margin: 0; font-size: 24px; font-weight: 900;">INDEBEL</h1>
+                <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Confirmation d'envoi</p>
+              </div>
               
-              <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #df6422; margin: 25px 0;">
-                <h3 style="margin: 0 0 15px; color: #2b4eef; font-size: 16px;">Résumé de votre proposition</h3>
-                <p style="margin: 8px 0;"><strong>Montant HT :</strong> ${htVal.toFixed(2)} €</p>
-                <p style="margin: 8px 0;"><strong>TVA (${tvaRate}%) :</strong> ${tvaVal.toFixed(2)} €</p>
-                <p style="margin: 12px 0 0; font-size: 18px; color: #df6422; font-weight: 900;">Total TTC : ${ttcVal.toFixed(2)} €</p>
-                <p style="margin: 8px 0 0; font-size: 14px; color: #64748b;"><strong>Délai :</strong> ${delai_realisation || 'Non spécifié'}</p>
-              </div>
-
-              <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 25px 0;">
-                <h4 style="margin: 0 0 12px; color: #2b4eef;">Coordonnées du client (${demandeData.prenom} ${demandeData.nom})</h4>
-                <p style="margin: 6px 0;"><strong>📍 Localisation :</strong> ${demandeData.ville} ${demandeData.code_postal ? '(' + demandeData.code_postal + ')' : ''}</p>
-                <p style="margin: 6px 0;"><strong>📧 Email :</strong> <a href="mailto:${demandeData.email}" style="color: #df6422; text-decoration: none;">${demandeData.email}</a></p>
-                <p style="margin: 6px 0;"><strong>📞 Téléphone :</strong> ${demandeData.telephone ? `<a href="tel:${demandeData.telephone}" style="color: #df6422; text-decoration: none;">${demandeData.telephone}</a>` : 'Non renseigné'}</p>
-              </div>
-
-              <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 30px; line-height: 1.5;">
-                Le client a reçu un email contenant votre devis détaillé ainsi qu'un lien direct pour l'accepter ou le refuser. Vous serez notifié(e) dès sa réponse.
-              </p>
-            </div>
-          </div>
-        `
-      });
-    } catch (e) { console.error('Email confirmation freelancer:', e); }
-
-    // 2. Email au client (Particulier) avec boutons Accepter / Refuser
-    try {
-      await sendEmail({
-        to: demandeData.email,
-        subject: `📩 Devis reçu pour votre demande : ${demandeData.type_travaux} (${ttcVal.toFixed(2)} € TTC)`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <div style="background: #2b4eef; padding: 24px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 24px; font-weight: 900;">INDEBEL</h1>
-              <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Nouveau devis reçu</p>
-            </div>
-
-            <div style="padding: 30px; background: #ffffff;">
-              <p style="font-size: 16px; margin-top: 0;">Bonjour <strong>${demandeData.prenom} ${demandeData.nom}</strong>,</p>
-              <p>Le prestataire <strong>${providerDisplayName}</strong> a étudié votre demande (<em>${demandeData.type_travaux}</em>) et vous propose le devis suivant :</p>
-
-              <div style="background: #f8fafc; border-left: 4px solid #df6422; padding: 20px; margin: 25px 0; border-radius: 12px;">
-                <h3 style="margin: 0 0 15px; color: #2b4eef; font-size: 16px;">Détail financier</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                  <tr>
-                    <td style="padding: 6px 0; color: #64748b;">Montant HT :</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">${htVal.toFixed(2)} €</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 6px 0; color: #64748b;">TVA (${tvaRate}%) :</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">${tvaVal.toFixed(2)} €</td>
-                  </tr>
-                  <tr style="border-top: 1px solid #e2e8f0;">
-                    <td style="padding: 12px 0 4px; font-weight: 700; color: #2b4eef; font-size: 16px;">Total TTC :</td>
-                    <td style="padding: 12px 0 4px; text-align: right; font-weight: 900; color: #df6422; font-size: 20px;">${ttcVal.toFixed(2)} €</td>
-                  </tr>
-                </table>
-                <p style="margin: 15px 0 0; font-size: 13px; color: #475569;"><strong>Délai estimé :</strong> ${delai_realisation || 'À convenir'}</p>
-              </div>
-
-              <div style="margin: 25px 0;">
-                <h4 style="margin: 0 0 10px; color: #2b4eef;">Description de la prestation :</h4>
-                <div style="background: #f1f5f9; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; font-size: 14px; white-space: pre-wrap; line-height: 1.6; color: #334155;">${description}</div>
-              </div>
-
-              <div style="text-align: center; margin: 35px 0 20px; padding: 30px 20px; background: #2b4eef; border-radius: 12px; color: white;">
-                <h4 style="margin: 0 0 20px; color: white; font-size: 18px;">Souhaitez-vous accepter ce devis ?</h4>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                  <a href="${acceptUrl}" target="_blank" style="background: #df6422; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 999px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block; box-shadow: 0 4px 12px rgba(223,100,34,0.4);">
-                    ✅ ACCEPTER
-                  </a>
-                  <a href="${refuseUrl}" target="_blank" style="background: transparent; border: 2px solid rgba(255,255,255,0.3); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 14px; display: inline-block;">
-                    Refuser
-                  </a>
+              <div style="padding: 30px; background: #ffffff;">
+                <h2 style="color: #2b4eef; margin-top: 0;">Bonjour ${freelancerData.prenom},</h2>
+                <p>Félicitations ! Votre devis pour la demande <strong>"${demandeData.type_travaux}"</strong> a été transmis avec succès au client.</p>
+                
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #df6422; margin: 25px 0;">
+                  <h3 style="margin: 0 0 15px; color: #2b4eef; font-size: 16px;">Résumé de votre proposition</h3>
+                  <p style="margin: 8px 0;"><strong>Montant HT :</strong> ${htVal.toFixed(2)} €</p>
+                  <p style="margin: 8px 0;"><strong>TVA (${tvaRate}%) :</strong> ${tvaVal.toFixed(2)} €</p>
+                  <p style="margin: 12px 0 0; font-size: 18px; color: #df6422; font-weight: 900;">Total TTC : ${ttcVal.toFixed(2)} €</p>
+                  <p style="margin: 8px 0 0; font-size: 14px; color: #64748b;"><strong>Délai :</strong> ${delai_realisation || 'Non spécifié'}</p>
                 </div>
-                <p style="margin: 15px 0 0; font-size: 12px; opacity: 0.8;">En cliquant sur un bouton, votre réponse sera transmise instantanément au prestataire.</p>
+
+                <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 25px 0;">
+                  <h4 style="margin: 0 0 12px; color: #2b4eef;">Coordonnées du client (${demandeData.prenom} ${demandeData.nom})</h4>
+                  <p style="margin: 6px 0;"><strong>📍 Localisation :</strong> ${demandeData.ville} ${demandeData.code_postal ? '(' + demandeData.code_postal + ')' : ''}</p>
+                  <p style="margin: 6px 0;"><strong>📧 Email :</strong> <a href="mailto:${demandeData.email}" style="color: #df6422; text-decoration: none;">${demandeData.email}</a></p>
+                  <p style="margin: 6px 0;"><strong>📞 Téléphone :</strong> ${demandeData.telephone ? `<a href="tel:${demandeData.telephone}" style="color: #df6422; text-decoration: none;">${demandeData.telephone}</a>` : 'Non renseigné'}</p>
+                </div>
+
+                <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 30px; line-height: 1.5;">
+                  Le client a reçu un email contenant votre devis détaillé ainsi qu'un lien direct pour l'accepter ou le refuser. Vous serez notifié(e) dès sa réponse.
+                </p>
               </div>
             </div>
-          </div>
-        `
-      });
-    } catch (emailError) {
-      console.error('Erreur envoi email devis client:', emailError);
-    }
+          `
+        });
+      } catch (e) { console.error('Email confirmation freelancer:', e); }
+
+      // 2. Email au client (Particulier) avec boutons Accepter / Refuser
+      try {
+        await sendEmail({
+          to: demandeData.email,
+          subject: `📩 Devis reçu pour votre demande : ${demandeData.type_travaux} (${ttcVal.toFixed(2)} € TTC)`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="background: #2b4eef; padding: 24px; text-align: center; color: white;">
+                <h1 style="margin: 0; font-size: 24px; font-weight: 900;">INDEBEL</h1>
+                <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Nouveau devis reçu</p>
+              </div>
+
+              <div style="padding: 30px; background: #ffffff;">
+                <p style="font-size: 16px; margin-top: 0;">Bonjour <strong>${demandeData.prenom} ${demandeData.nom}</strong>,</p>
+                <p>Le prestataire <strong>${providerDisplayName}</strong> a étudié votre demande (<em>${demandeData.type_travaux}</em>) et vous propose le devis suivant :</p>
+
+                <div style="background: #f8fafc; border-left: 4px solid #df6422; padding: 20px; margin: 25px 0; border-radius: 12px;">
+                  <h3 style="margin: 0 0 15px; color: #2b4eef; font-size: 16px;">Détail financier</h3>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr>
+                      <td style="padding: 6px 0; color: #64748b;">Montant HT :</td>
+                      <td style="padding: 6px 0; text-align: right; font-weight: 600;">${htVal.toFixed(2)} €</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 6px 0; color: #64748b;">TVA (${tvaRate}%) :</td>
+                      <td style="padding: 6px 0; text-align: right; font-weight: 600;">${tvaVal.toFixed(2)} €</td>
+                    </tr>
+                    <tr style="border-top: 1px solid #e2e8f0;">
+                      <td style="padding: 12px 0 4px; font-weight: 700; color: #2b4eef; font-size: 16px;">Total TTC :</td>
+                      <td style="padding: 12px 0 4px; text-align: right; font-weight: 900; color: #df6422; font-size: 20px;">${ttcVal.toFixed(2)} €</td>
+                    </tr>
+                  </table>
+                  <p style="margin: 15px 0 0; font-size: 13px; color: #475569;"><strong>Délai estimé :</strong> ${delai_realisation || 'À convenir'}</p>
+                </div>
+
+                <div style="margin: 25px 0;">
+                  <h4 style="margin: 0 0 10px; color: #2b4eef;">Description de la prestation :</h4>
+                  <div style="background: #f1f5f9; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; font-size: 14px; white-space: pre-wrap; line-height: 1.6; color: #334155;">${description}</div>
+                </div>
+
+                <div style="text-align: center; margin: 35px 0 20px; padding: 30px 20px; background: #2b4eef; border-radius: 12px; color: white;">
+                  <h4 style="margin: 0 0 20px; color: white; font-size: 18px;">Souhaitez-vous accepter ce devis ?</h4>
+                  <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <a href="${acceptUrl}" target="_blank" style="background: #df6422; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 999px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: inline-block; box-shadow: 0 4px 12px rgba(223,100,34,0.4);">
+                      ✅ ACCEPTER
+                    </a>
+                    <a href="${refuseUrl}" target="_blank" style="background: transparent; border: 2px solid rgba(255,255,255,0.3); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 14px; display: inline-block;">
+                      Refuser
+                    </a>
+                  </div>
+                  <p style="margin: 15px 0 0; font-size: 12px; opacity: 0.8;">En cliquant sur un bouton, votre réponse sera transmise instantanément au prestataire.</p>
+                </div>
+              </div>
+            </div>
+          `
+        });
+      } catch (emailError) {
+        console.error('Erreur envoi email devis client:', emailError);
+      }
+    })();
 
     // 3. Notification in-app pour l'employeur (si applicable)
     try {
@@ -952,25 +966,17 @@ exports.soumettreDevis = async (req, res) => {
       console.error('Erreur création notification devis client:', notifError);
     }
 
-    res.json({
+    return res.json({
       success: true,
-      message: 'Devis soumis et transmis au client avec succès',
-      data: {
-        id: result.insertId,
-        token_action: tokenAction,
-        montant_ht: htVal,
-        taux_tva: tvaRate,
-        montant_tva: tvaVal,
-        montant_ttc: ttcVal,
-        nb_devis_total: newCount[0].nb
-      }
+      message: 'Votre devis a été transmis au client avec succès !',
+      devis_id: result.insertId
     });
 
   } catch (error) {
     console.error('Erreur soumission devis:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: 'Erreur lors de la soumission du devis'
+      message: 'Erreur serveur lors de la soumission du devis'
     });
   }
 };
@@ -1176,7 +1182,7 @@ exports.getMesDevisSoumis = async (req, res) => {
   try {
     const freelancerId = req.user.id;
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit) || 20);
+    const limit = Math.max(1, parseInt(req.query.limit) || 25);
     const offset = (page - 1) * limit;
 
     const [countResult] = await db.query(

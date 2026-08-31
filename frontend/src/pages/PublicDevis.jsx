@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, Briefcase, CalendarDays, FileText, MapPin, RefreshCw, Search, Users, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Briefcase, LayoutGrid, List, MapPin, RefreshCw, Search, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Button from '../components/Button'
 import DevisCard from '../components/devis/DevisCard'
@@ -8,21 +8,51 @@ import VerificationPopup from '../components/VerificationPopup'
 import { devisService } from '../services/devisService'
 import { useAuth } from '../context/AuthContext'
 
+import api from '../services/api'
+import DevisUnlockModal from '../components/devis/DevisUnlockModal'
+
 const PublicDevis = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [demandes, setDemandes] = useState([])
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 9 })
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [viewMode, setViewMode] = useState(() => (
+    localStorage.getItem('indebel_devis_view_mode') === 'list' ? 'list' : 'grid'
+  ))
   const [closedDemande, setClosedDemande] = useState(null)
   const [openingId, setOpeningId] = useState(null)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [devisToUnlock, setDevisToUnlock] = useState(null)
+  const [unlockingDevis, setUnlockingDevis] = useState(false)
+  const [creditCost, setCreditCost] = useState(1)
+  const [creditBalance, setCreditBalance] = useState(user?.solde_credits || 0)
 
   useEffect(() => {
     document.title = 'Devis disponibles - Indebel'
     loadDevis(1)
-  }, [])
+    if (user) fetchCreditInfo()
+  }, [user])
+
+  const fetchCreditInfo = async () => {
+    try {
+      const [settingsRes, balanceRes] = await Promise.all([
+        api.get('/credits/settings/price').catch(() => api.get('/admin-credits/settings/price')).catch(() => ({ data: {} })),
+        api.get('/credits/balance').catch(() => ({ data: {} }))
+      ])
+      if (settingsRes.data?.cout_vues_devis !== undefined) {
+        setCreditCost(parseInt(settingsRes.data.cout_vues_devis, 10))
+      }
+      if (balanceRes.data?.solde !== undefined) {
+        setCreditBalance(parseInt(balanceRes.data.solde, 10))
+      } else if (user?.solde_credits !== undefined) {
+        setCreditBalance(user.solde_credits)
+      }
+    } catch (err) {
+      console.error('Erreur chargement crédits:', err)
+    }
+  }
 
   const loadDevis = async (page = 1) => {
     try {
@@ -55,7 +85,17 @@ const PublicDevis = () => {
   const currentPage = Number(pagination.currentPage || pagination.page || 1)
   const totalPages = Number(pagination.totalPages || pagination.pages || 1)
 
-  const openDetail = async (demande) => {
+  const changeViewMode = (mode) => {
+    setViewMode(mode)
+    localStorage.setItem('indebel_devis_view_mode', mode)
+  }
+
+  const openDetail = (demande) => {
+    if (!user) {
+      navigate('/login', { state: { from: `/devis/${demande.id}` } })
+      return
+    }
+
     if (user?.role === 'freelancer' && user?.statut_verification === 'non_verifie') {
       setShowVerificationModal(true)
       return
@@ -67,6 +107,41 @@ const PublicDevis = () => {
       return
     }
 
+    const storageKey = `unlocked_devis_detail_${user?.id}_${demande.id}`
+    if (user?.role === 'admin' || sessionStorage.getItem(storageKey) === 'true') {
+      openDetailDirect(demande)
+    } else {
+      setDevisToUnlock(demande)
+    }
+  }
+
+  const handleConfirmUnlockDevis = async (demande) => {
+    try {
+      setUnlockingDevis(true)
+      const res = await api.post('/credits/consume', { action: 'view_devis_detail', amount: creditCost })
+      if (res.data?.success) {
+        const storageKey = `unlocked_devis_detail_${user?.id}_${demande.id}`
+        sessionStorage.setItem(storageKey, 'true')
+        if (res.data.newBalance !== undefined) {
+          setCreditBalance(res.data.newBalance)
+        }
+        if (refreshUser) refreshUser()
+        toast.success(`Devis débloqué ! ${res.data.deducted || creditCost} crédit(s) déduit(s).`)
+        setDevisToUnlock(null)
+        openDetailDirect(demande)
+      }
+    } catch (error) {
+      if (error.response?.data?.code === 'INSUFFICIENT_CREDITS' || error.response?.status === 403) {
+        // Géré par la modale
+      } else {
+        toast.error(error.response?.data?.message || 'Erreur lors de la déduction des crédits')
+      }
+    } finally {
+      setUnlockingDevis(false)
+    }
+  }
+
+  const openDetailDirect = async (demande) => {
     try {
       setOpeningId(demande.id)
       const response = await devisService.getPublicDemandeStatus(demande.id)
@@ -124,20 +199,50 @@ const PublicDevis = () => {
               placeholder="Rechercher par ville, catégorie ou travaux"
             />
           </div>
-          <Button variant="outline" onClick={() => loadDevis(currentPage)} className="rounded-full">
-            <RefreshCw className="h-4 w-4" />
-            Actualiser
-          </Button>
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <div className="inline-flex items-center rounded-xl bg-slate-100 p-1" role="group" aria-label="Affichage des devis">
+              <button
+                type="button"
+                onClick={() => changeViewMode('grid')}
+                aria-pressed={viewMode === 'grid'}
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-black transition ${
+                  viewMode === 'grid'
+                    ? 'bg-[#082151] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-white hover:text-[#082151]'
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">Grille</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => changeViewMode('list')}
+                aria-pressed={viewMode === 'list'}
+                className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-black transition ${
+                  viewMode === 'list'
+                    ? 'bg-[#082151] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-white hover:text-[#082151]'
+                }`}
+              >
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Liste</span>
+              </button>
+            </div>
+            <Button variant="outline" onClick={() => loadDevis(currentPage)} className="rounded-full">
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Actualiser</span>
+            </Button>
+          </div>
         </div>
 
         {loading ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className={`grid gap-5 ${viewMode === 'grid' ? 'md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
             {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="h-72 animate-pulse rounded-lg bg-white ring-1 ring-slate-200" />
+              <div key={index} className={`${viewMode === 'grid' ? 'h-72' : 'h-52'} animate-pulse rounded-lg bg-white ring-1 ring-slate-200`} />
             ))}
           </div>
         ) : filteredDemandes.length > 0 ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className={`grid gap-5 ${viewMode === 'grid' ? 'md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
             {filteredDemandes.map((demande) => (
               <DevisCard
                 key={demande.id}
@@ -212,6 +317,17 @@ const PublicDevis = () => {
           </div>
         </div>
       )}
+
+      <DevisUnlockModal
+        isOpen={!!devisToUnlock}
+        onClose={() => setDevisToUnlock(null)}
+        demande={devisToUnlock}
+        creditCost={creditCost}
+        creditBalance={creditBalance}
+        onConfirmUnlock={handleConfirmUnlockDevis}
+        unlocking={unlockingDevis}
+        user={user}
+      />
     </main>
   )
 }

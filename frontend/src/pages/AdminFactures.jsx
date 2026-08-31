@@ -120,6 +120,17 @@ const AdminFactures = () => {
     }
   }
 
+  const handleRetryFalco = async (factureId) => {
+    try {
+      const toastId = toast.loading("Transmission à Falco en cours...")
+      await factureService.retryFalco(factureId)
+      toast.success("Facture transmise avec succès à Falco !", { id: toastId })
+      load()
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Erreur lors de la transmission Falco")
+    }
+  }
+
   const totalFalcoErrors = useMemo(
     () => factures.filter((facture) => facture.falco_status === 'error' || facture.falco_error).length,
     [factures]
@@ -152,8 +163,8 @@ const AdminFactures = () => {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Falco facturation</p>
-            <h1 className="mt-3 text-3xl font-black text-slate-900">Factures forfaits</h1>
-            <p className="mt-2 max-w-2xl text-slate-600">Suivi des PDF générés, de l’envoi Falco et des erreurs à traiter.</p>
+            <h1 className="mt-3 text-3xl font-black text-slate-900">Factures crédits</h1>
+            <p className="mt-2 max-w-2xl text-slate-600">Suivi des factures générées lors des achats de crédits Indebel et de leur synchronisation Falco.</p>
           </div>
         </div>
         <div className="mt-7 grid gap-3 md:grid-cols-3">
@@ -194,9 +205,17 @@ const AdminFactures = () => {
                   <td className="px-5 py-4">{facture.forfait_nom || facture.forfait_nom_actuel || '-'}</td>
                   <td className="px-5 py-4 font-bold">{money(facture.montant_ttc)}</td>
                   <td className="px-5 py-4">
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 items-start">
                       <FalcoBadge status={facture.falco_status} />
                       {facture.falco_error && <span className="max-w-xs text-xs text-red-600">{facture.falco_error}</span>}
+                      {(facture.falco_status === 'error' || facture.falco_error) && (
+                        <button
+                          onClick={() => handleRetryFalco(facture.id)}
+                          className="mt-1 inline-flex items-center text-xs text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" /> Réessayer Falco
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="px-5 py-4 text-slate-600">{date(facture.date_creation)}</td>

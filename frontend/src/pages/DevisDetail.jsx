@@ -8,6 +8,10 @@ import VerificationPopup from '../components/VerificationPopup'
 import { devisService } from '../services/devisService'
 import { formatDate, formatMoney } from '../components/devis/DevisCard'
 import { useAuth } from '../context/AuthContext'
+import { API_BASE_URL } from '../config'
+
+import api from '../services/api'
+import DevisUnlockModal from '../components/devis/DevisUnlockModal'
 
 const emptyForm = {
   montant_ht: '',
@@ -29,7 +33,7 @@ const computeAmounts = (ht, taux) => {
 const DevisDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [demande, setDemande] = useState(null)
   const [loading, setLoading] = useState(true)
   const [quotaModal, setQuotaModal] = useState({ open: false, type: 'view', message: '' })
@@ -42,6 +46,11 @@ const DevisDetail = () => {
   const [priceSuggestion, setPriceSuggestion] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
+  const [showUnlockModal, setShowUnlockModal] = useState(false)
+  const [unlockingDevis, setUnlockingDevis] = useState(false)
+  const [creditCost, setCreditCost] = useState(1)
+  const [aiCreditCost, setAiCreditCost] = useState(2)
+  const [creditBalance, setCreditBalance] = useState(user?.solde_credits || 0)
   const fileRef = useRef(null)
 
   const parsePhotos = (photoData) => {
@@ -61,13 +70,36 @@ const DevisDetail = () => {
     }
     if (typeof finalUrl !== 'string' || !finalUrl) return ''
     if (finalUrl.startsWith('http') || finalUrl.startsWith('data:')) return finalUrl
-    return finalUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${finalUrl}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${finalUrl}`
+    const baseUrl = API_BASE_URL.replace(/\/api$/, '')
+    return finalUrl.startsWith('/uploads') ? `${baseUrl}${finalUrl}` : `${baseUrl}/uploads/${finalUrl}`
   }
 
   useEffect(() => {
     document.title = `Devis #${id} - Indebel`
     load()
-  }, [id])
+  }, [id, user])
+
+  const fetchCreditInfo = async () => {
+    try {
+      const [settingsRes, balanceRes] = await Promise.all([
+        api.get('/credits/settings/price').catch(() => api.get('/admin-credits/settings/price')).catch(() => ({ data: {} })),
+        api.get('/credits/balance').catch(() => ({ data: {} }))
+      ])
+      if (settingsRes.data?.cout_vues_devis !== undefined) {
+        setCreditCost(parseInt(settingsRes.data.cout_vues_devis, 10))
+      }
+      if (settingsRes.data?.cout_devis_ia !== undefined) {
+        setAiCreditCost(parseInt(settingsRes.data.cout_devis_ia, 10))
+      }
+      if (balanceRes.data?.solde !== undefined) {
+        setCreditBalance(parseInt(balanceRes.data.solde, 10))
+      } else if (user?.solde_credits !== undefined) {
+        setCreditBalance(user.solde_credits)
+      }
+    } catch (err) {
+      console.error('Erreur chargement crédits:', err)
+    }
+  }
 
   const load = async () => {
     if (user?.role === 'freelancer' && user?.statut_verification === 'non_verifie') {
@@ -90,6 +122,14 @@ const DevisDetail = () => {
         montant_ttc: amounts.montant_ttc || '',
         delai_realisation: '3 à 5 jours ouvrables'
       })
+
+      if (user && user.role !== 'admin') {
+        const storageKey = `unlocked_devis_detail_${user.id}_${id}`
+        if (sessionStorage.getItem(storageKey) !== 'true') {
+          fetchCreditInfo()
+          setShowUnlockModal(true)
+        }
+      }
     } catch (error) {
       if (error.response?.status === 403) {
         setQuotaModal({ open: true, type: 'view', message: error.response?.data?.message })
@@ -98,6 +138,31 @@ const DevisDetail = () => {
       toast.error(error.response?.data?.message || 'Demande introuvable')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleConfirmUnlockDevis = async (demandeToUnlock) => {
+    try {
+      setUnlockingDevis(true)
+      const res = await api.post('/credits/consume', { action: 'view_devis_detail', amount: creditCost })
+      if (res.data?.success) {
+        const storageKey = `unlocked_devis_detail_${user?.id}_${id}`
+        sessionStorage.setItem(storageKey, 'true')
+        if (res.data.newBalance !== undefined) {
+          setCreditBalance(res.data.newBalance)
+        }
+        if (refreshUser) refreshUser()
+        toast.success(`Devis débloqué ! ${res.data.deducted || creditCost} crédit(s) déduit(s).`)
+        setShowUnlockModal(false)
+      }
+    } catch (error) {
+      if (error.response?.data?.code === 'INSUFFICIENT_CREDITS' || error.response?.status === 403) {
+        // Géré par la modale
+      } else {
+        toast.error(error.response?.data?.message || 'Erreur lors de la déduction des crédits')
+      }
+    } finally {
+      setUnlockingDevis(false)
     }
   }
 
@@ -350,10 +415,39 @@ const DevisDetail = () => {
               </p>
               <h2 className="mt-3 pr-10 text-2xl font-black">{demande.type_travaux}</h2>
               {writeMode === 'ai' && (
-                <Button type="button" onClick={generateAi} loading={generating} className="mt-5 rounded-full bg-[#df6422] hover:bg-[#c5551c]">
-                  <Brain className="h-4 w-4" />
-                  Générer avec IA
-                </Button>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between rounded-xl bg-white/10 p-3 text-xs font-semibold text-white/90 border border-white/20">
+                    <span>✨ Tarif Génération IA : <strong className="text-white">{aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}</strong></span>
+                    <span>Solde actuel : <strong className={creditBalance < aiCreditCost ? "text-amber-300 font-bold" : "text-emerald-300 font-bold"}>{creditBalance} crédit{creditBalance > 1 ? 's' : ''}</strong></span>
+                  </div>
+
+                  {creditBalance < aiCreditCost ? (
+                    <div className="rounded-xl bg-red-500/20 border border-red-400/40 p-3 text-xs text-red-100 font-bold space-y-2">
+                      <p className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-300 flex-shrink-0" />
+                        Crédits insuffisants pour la génération IA ({creditBalance} / {aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(user?.role === 'employer' ? '/employer/credits' : '/freelancer/credits')}
+                        className="inline-flex items-center justify-center rounded-lg bg-[#c02525] px-3 py-2 text-xs font-black text-white hover:bg-[#a91f1f] w-full"
+                      >
+                        Recharger mes crédits
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={generateAi}
+                      loading={generating}
+                      disabled={creditBalance < aiCreditCost}
+                      className="w-full justify-center rounded-full bg-[#df6422] hover:bg-[#c5551c]"
+                    >
+                      <Brain className="h-4 w-4" />
+                      Générer avec IA ({aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''})
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -451,15 +545,16 @@ const DevisDetail = () => {
       )}
       <QuotaModal {...quotaModal} onClose={() => navigate('/freelancer/devis-disponibles')} />
       
-      {/* Photo Enlarge Modal */}
-      {selectedPhoto && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/90 p-4 backdrop-blur-sm" onClick={() => setSelectedPhoto(null)}>
-          <button className="absolute top-6 right-6 text-white hover:text-slate-300 transition-colors" onClick={() => setSelectedPhoto(null)}>
-            <X className="h-10 w-10" />
-          </button>
-          <img src={selectedPhoto} alt="Agrandissement" className="max-h-[90vh] max-w-full rounded-2xl shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
-        </div>
-      )}
+      <DevisUnlockModal
+        isOpen={showUnlockModal}
+        onClose={() => navigate(-1)}
+        demande={demande}
+        creditCost={creditCost}
+        creditBalance={creditBalance}
+        onConfirmUnlock={handleConfirmUnlockDevis}
+        unlocking={unlockingDevis}
+        user={user}
+      />
     </main>
   )
 }

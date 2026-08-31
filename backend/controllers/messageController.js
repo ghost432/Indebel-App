@@ -8,28 +8,33 @@ async function createOrGetConversation(req, res) {
     console.log('📩 createOrGetConversation - Body:', req.body);
     console.log('📩 createOrGetConversation - User:', req.user.id, req.user.role);
     
-    const { recipientId, recipientType, freelancer_id, employer_id } = req.body;
+    const { recipientId, recipientType, freelancer_id, employer_id, targetUserId } = req.body;
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Support de l'ancien format ET du nouveau format
+    const target = recipientId || targetUserId;
+
     let finalFreelancerId, finalEmployerId;
 
-    if (recipientId && recipientType) {
-      // Nouveau format (recipientId + recipientType)
-      console.log('📩 Nouveau format détecté:', { recipientId, recipientType });
+    if (target && recipientType) {
       if (recipientType === 'freelancer') {
-        finalFreelancerId = recipientId;
+        finalFreelancerId = target;
         finalEmployerId = userId;
       } else {
         finalFreelancerId = userId;
-        finalEmployerId = recipientId;
+        finalEmployerId = target;
       }
     } else if (freelancer_id && employer_id) {
-      // Ancien format (freelancer_id + employer_id)
-      console.log('📩 Ancien format détecté:', { freelancer_id, employer_id });
       finalFreelancerId = freelancer_id;
       finalEmployerId = employer_id;
+    } else if (target) {
+      if (userRole === 'freelancer' || userRole === 'prestataire') {
+        finalFreelancerId = userId;
+        finalEmployerId = target;
+      } else {
+        finalFreelancerId = target;
+        finalEmployerId = userId;
+      }
     } else {
       console.log('❌ Format invalide - Body:', req.body);
       return res.status(400).json({
@@ -40,16 +45,7 @@ async function createOrGetConversation(req, res) {
     
     console.log('📩 IDs finaux:', { finalFreelancerId, finalEmployerId });
 
-    // Vérification des autorisations
-    if (userId != finalFreelancerId && userId != finalEmployerId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès non autorisé à cette conversation'
-      });
-    }
-
     // Vérifier si une conversation existe déjà
-    console.log('📩 Vérification conversation existante...');
     const [existing] = await db.query(
       `SELECT * FROM conversations 
        WHERE (freelancer_id = ? AND employer_id = ?) 
@@ -74,7 +70,7 @@ async function createOrGetConversation(req, res) {
     );
 
     console.log('✅ Conversation créée avec succès - ID:', result.insertId);
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: {
         id: result.insertId,
@@ -85,7 +81,7 @@ async function createOrGetConversation(req, res) {
     });
   } catch (error) {
     console.error('Erreur createOrGetConversation:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       success: false, 
       message: 'Erreur serveur',
       error: error.message 
@@ -123,10 +119,10 @@ async function getUserConversations(req, res) {
       [userId, userId, userId, userId]
     );
 
-    res.json({ success: true, data: conversations });
+    return res.json({ success: true, data: conversations });
   } catch (error) {
     console.error('Erreur getUserConversations:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       success: false, 
       message: 'Erreur serveur',
       error: error.message 
@@ -141,7 +137,7 @@ async function getConversationMessages(req, res) {
     const userId = req.user.id;
     
     const [messages] = await db.query(
-      `SELECT m.*, u.prenom, u.nom, u.photo_profil
+      `SELECT m.*, m.content as contenu, u.prenom, u.nom, u.photo_profil
        FROM messages m
        JOIN users u ON m.sender_id = u.id
        WHERE m.conversation_id = ?
@@ -159,10 +155,10 @@ async function getConversationMessages(req, res) {
       [conversationId, userId]
     );
 
-    res.json({ success: true, messages });
+    return res.json({ success: true, data: messages, messages: messages });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -171,11 +167,17 @@ async function sendMessage(req, res) {
   try {
     const conversationId = req.params.conversationId;
     const senderId = req.user.id;
-    const { content } = req.body;
+    const content = req.body.content || req.body.contenu;
+
+    if (!content || !String(content).trim()) {
+      return res.status(400).json({ success: false, message: 'Contenu vide' });
+    }
+
+    const textContent = String(content).trim();
 
     const [result] = await db.query(
       'INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)',
-      [conversationId, senderId, content]
+      [conversationId, senderId, textContent]
     );
     
     const messageId = result.insertId;
@@ -183,23 +185,32 @@ async function sendMessage(req, res) {
     // Envoyer notification et email au destinataire (async, ne pas bloquer)
     const receiverId = await messageNotificationService.getMessageReceiver(conversationId, senderId);
     if (receiverId) {
-      messageNotificationService.notifyNewMessage(messageId, senderId, receiverId, conversationId, content)
+      messageNotificationService.notifyNewMessage(messageId, senderId, receiverId, conversationId, textContent)
         .catch(err => console.error('Erreur notification:', err));
     }
 
-    res.status(201).json({ 
+    return res.status(201).json({ 
       success: true, 
+      data: {
+        id: messageId, 
+        conversation_id: conversationId, 
+        sender_id: senderId, 
+        content: textContent, 
+        contenu: textContent,
+        created_at: new Date() 
+      },
       message: { 
         id: messageId, 
         conversation_id: conversationId, 
         sender_id: senderId, 
-        content, 
+        content: textContent, 
+        contenu: textContent,
         created_at: new Date() 
       } 
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 }
 

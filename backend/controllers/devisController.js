@@ -216,27 +216,27 @@ exports.createDemandeDevis = async (req, res) => {
       });
     }
 
-    // Check employer limit
-    const { getEffectiveForfait } = require('../services/devisViewLimitService');
+    // Check employer credit limit
     const [employers] = await db.query(
-      'SELECT id FROM users WHERE email = ? AND role = "employer"',
+      'SELECT id, solde_credits FROM users WHERE email = ? AND role = "employer"',
       [email]
     );
+    let employerId = null;
+    let cout_demandes_devis = 0;
+    
     if (employers.length > 0) {
-      const forfait = await getEffectiveForfait(employers[0].id);
-      const limit = forfait?.max_demandes_devis;
-      if (limit !== null && limit !== undefined) {
-        const [countResult] = await db.query(
-          'SELECT COUNT(*) as nb FROM demandes_devis WHERE email = ?',
-          [email]
-        );
-        if (countResult[0].nb >= limit) {
-          return res.status(403).json({
-            success: false,
-            code: 'DEMANDE_DEVIS_LIMIT_REACHED',
-            message: `Vous avez atteint votre limite de ${limit} demandes de devis. Veuillez mettre à jour votre forfait.`
-          });
-        }
+      employerId = employers[0].id;
+      const solde_credits = employers[0].solde_credits || 0;
+      
+      const [settingsRows] = await db.query('SELECT setting_value FROM site_settings WHERE setting_key = "cout_demandes_devis"');
+      cout_demandes_devis = settingsRows.length > 0 ? parseInt(settingsRows[0].setting_value, 10) : 1;
+      
+      if (solde_credits < cout_demandes_devis) {
+        return res.status(403).json({
+          success: false,
+          code: 'INSUFFICIENT_CREDITS',
+          message: `Crédits insuffisants. Il vous faut ${cout_demandes_devis} crédits pour créer cette demande. Veuillez recharger votre portefeuille.`
+        });
       }
     }
 
@@ -251,7 +251,7 @@ exports.createDemandeDevis = async (req, res) => {
         type_travaux,
         categorie || null,
         description,
-        urgence || 'normal',
+        (urgence === 'normale' || urgence === 'normal') ? 'normal' : (urgence === 'urgente' ? 'urgente' : 'normal'),
         adresse,
         code_postal,
         ville,
@@ -267,6 +267,12 @@ exports.createDemandeDevis = async (req, res) => {
         fichiers_joints ? JSON.stringify(fichiers_joints) : null
       ]
     );
+
+    // Deduct credits if applicable
+    if (employerId && cout_demandes_devis > 0) {
+      await db.query('UPDATE users SET solde_credits = solde_credits - ? WHERE id = ?', [cout_demandes_devis, employerId]);
+      await db.query(`INSERT INTO historique_credits (user_id, type, montant, description) VALUES (?, "depense", ?, "Création d'une demande de devis")`, [employerId, cout_demandes_devis]);
+    }
 
     // Envoyer email de confirmation au client
     try {
@@ -367,7 +373,8 @@ exports.createDemandeDevis = async (req, res) => {
     console.error('Erreur création demande devis:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la création de la demande de devis'
+      message: 'Erreur lors de la création de la demande de devis',
+      error: error.message
     });
   }
 };
@@ -413,6 +420,7 @@ exports.getAllDemandes = async (req, res) => {
           SUM(CASE WHEN statut = 'valide' THEN 1 ELSE 0 END) as valide,
           SUM(CASE WHEN statut = 'refuse' THEN 1 ELSE 0 END) as refuse,
           SUM(CASE WHEN statut = 'traite' THEN 1 ELSE 0 END) as traite,
+          SUM(CASE WHEN statut = 'termine' THEN 1 ELSE 0 END) as termine,
           SUM(CASE WHEN statut = 'devis_complet' THEN 1 ELSE 0 END) as devis_complet,
           SUM(CASE WHEN statut = 'retire_liste' THEN 1 ELSE 0 END) as retire_liste
         FROM demandes_devis
@@ -495,6 +503,7 @@ exports.getAllDemandes = async (req, res) => {
         SUM(CASE WHEN statut = 'valide' THEN 1 ELSE 0 END) as valide,
         SUM(CASE WHEN statut = 'refuse' THEN 1 ELSE 0 END) as refuse,
         SUM(CASE WHEN statut = 'traite' THEN 1 ELSE 0 END) as traite,
+        SUM(CASE WHEN statut = 'termine' THEN 1 ELSE 0 END) as termine,
         SUM(CASE WHEN statut = 'devis_complet' THEN 1 ELSE 0 END) as devis_complet,
         SUM(CASE WHEN statut = 'retire_liste' THEN 1 ELSE 0 END) as retire_liste
       FROM demandes_devis
@@ -841,6 +850,41 @@ exports.marquerRetireeListe = async (req, res) => {
   }
 };
 
+// Marquer une demande de devis comme terminée (Recruteur propriétaire ou Admin)
+exports.marquerTerminee = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let query = `UPDATE demandes_devis SET statut = 'termine' WHERE id = ?`;
+    let params = [id];
+
+    if (req.user && req.user.role !== 'admin') {
+      query = `UPDATE demandes_devis SET statut = 'termine' WHERE id = ? AND email = ?`;
+      params = [id, req.user.email];
+    }
+
+    const [result] = await db.query(query, params);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Demande non trouvée ou non autorisée'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Demande de devis marquée comme terminée avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur marquerTerminee:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du statut'
+    });
+  }
+};
+
 // Récupérer les catégories de travaux (depuis missions)
 exports.getCategories = async (req, res) => {
   try {
@@ -875,11 +919,64 @@ exports.deleteDemande = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // 1. Récupérer la demande avant suppression pour identifier le recruteur et les prestataires
+    const [demandes] = await db.query('SELECT * FROM demandes_devis WHERE id = ?', [id]);
+
+    if (demandes.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Demande de devis non trouvée'
+      });
+    }
+
+    const demande = demandes[0];
+
+    // 2. Notifier le recruteur (propriétaire de la demande)
+    if (demande.email) {
+      const [recruiterRows] = await db.query('SELECT id FROM users WHERE email = ?', [demande.email]);
+      if (recruiterRows.length > 0) {
+        const recruiterId = recruiterRows[0].id;
+        const titreDevis = demande.type_travaux || demande.categorie || `Demande #${id}`;
+        await db.query(
+          'INSERT INTO notifications (user_id, type, titre, message, lien, lu, date_creation) VALUES (?, ?, ?, ?, ?, FALSE, NOW())',
+          [
+            recruiterId,
+            'warning',
+            '🗑️ Demande de devis supprimée par l\'administration',
+            `Votre demande de devis "${titreDevis}" a été supprimée par l'administration. Elle n'apparaîtra plus dans votre compte.`,
+            '/employer/devis'
+          ]
+        );
+      }
+    }
+
+    // 3. Notifier les prestataires qui avaient soumis un devis pour cette demande
+    const [devisSoumisRows] = await db.query(
+      'SELECT DISTINCT freelancer_id FROM devis_soumis WHERE demande_devis_id = ?',
+      [id]
+    );
+
+    for (const item of devisSoumisRows) {
+      if (item.freelancer_id) {
+        await db.query(
+          'INSERT INTO notifications (user_id, type, titre, message, lien, lu, date_creation) VALUES (?, ?, ?, ?, ?, FALSE, NOW())',
+          [
+            item.freelancer_id,
+            'info',
+            'ℹ️ Demande de devis supprimée',
+            `La demande de devis "${demande.type_travaux || 'associée'}" pour laquelle vous aviez soumis une offre a été supprimée par l'administration.`,
+            '/freelancer/devis'
+          ]
+        );
+      }
+    }
+
+    // 4. Supprimer la demande de devis
     await db.query('DELETE FROM demandes_devis WHERE id = ?', [id]);
 
     res.json({
       success: true,
-      message: 'Demande supprimée avec succès'
+      message: 'Demande supprimée avec succès et notifications créées'
     });
 
   } catch (error) {
@@ -908,6 +1005,7 @@ exports.getDevisValides = async (req, res) => {
               ), 0) as nb_devis_soumis
        FROM demandes_devis dd
        WHERE dd.statut IN ('valide', 'traite', 'devis_complet')
+       AND dd.date_validation IS NOT NULL
        HAVING nb_devis_soumis < 5
        ORDER BY dd.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -919,6 +1017,7 @@ exports.getDevisValides = async (req, res) => {
       `SELECT COUNT(*) as total 
        FROM demandes_devis dd
        WHERE dd.statut IN ('valide', 'traite', 'devis_complet')
+       AND dd.date_validation IS NOT NULL
        AND (
          SELECT COUNT(*) 
          FROM devis_soumis ds 
@@ -969,6 +1068,8 @@ exports.getDevisValides = async (req, res) => {
               ), 0) as nb_devis_soumis
        FROM demandes_devis dd
        WHERE dd.id IN (?)
+       AND dd.statut IN ('valide', 'traite', 'devis_complet')
+       AND dd.date_validation IS NOT NULL
        ORDER BY dd.created_at DESC`,
       [devisIds]
     );
@@ -1017,7 +1118,7 @@ exports.getPublicDemandeById = async (req, res) => {
               dd.fichiers_joints, dd.created_at,
               COALESCE((SELECT COUNT(*) FROM devis_soumis ds WHERE ds.demande_devis_id = dd.id), 0) as nb_devis_soumis
        FROM demandes_devis dd
-       WHERE dd.id = ? AND dd.statut IN ('valide', 'traite', 'devis_complet')`,
+       WHERE dd.id = ?`,
       [id]
     );
 
@@ -1073,7 +1174,9 @@ exports.getPublicDemandeStatus = async (req, res) => {
     const [rows] = await db.query(
       `SELECT id, type_travaux, statut
        FROM demandes_devis
-       WHERE id = ? AND statut IN ('valide', 'traite', 'devis_complet')`,
+       WHERE id = ?
+       AND statut IN ('valide', 'traite', 'devis_complet')
+       AND date_validation IS NOT NULL`,
       [id]
     );
 
@@ -1194,7 +1297,9 @@ exports.marquerAttente = async (req, res) => {
     try {
         const { id } = req.params;
         const [result] = await db.query(
-            'UPDATE demandes_devis SET statut = ? WHERE id = ?',
+            `UPDATE demandes_devis
+             SET statut = ?, date_validation = NULL, traite_par = NULL
+             WHERE id = ?`,
             ['en_attente', id]
         );
         

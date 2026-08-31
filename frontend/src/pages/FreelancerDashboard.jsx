@@ -19,7 +19,7 @@ import axios from 'axios'
 import { API_BASE_URL } from '../config'
 
 const FreelancerDashboard = () => {
-  const { user } = useAuth()
+  const { user, checkAuth } = useAuth()
   const [applications, setApplications] = useState([])
   const [devisList, setDevisList] = useState([])
   const [listTab, setListTab] = useState('devis')
@@ -31,6 +31,16 @@ const FreelancerDashboard = () => {
 
   useEffect(() => {
     document.title = 'Tableau de bord - Indebel'
+
+    // Vérifier les paramètres de retour de paiement Stripe
+    const searchParams = new URLSearchParams(window.location.search)
+    if (searchParams.get('payment_success') === 'true') {
+      const addedCredits = searchParams.get('credits')
+      toast.success(`🎉 Paiement réussi ! ${addedCredits ? `${addedCredits} crédits ont été ajoutés à votre solde.` : 'Vos crédits ont été ajoutés.'}`, { duration: 6000 })
+      if (checkAuth) checkAuth()
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+
     fetchApplications()
     fetchNotifications()
     fetchAvailableMissions()
@@ -662,21 +672,21 @@ const FreelancerDashboard = () => {
             </div>
           )}
           
-          {user && !user.forfait_nom && (
-            <div className="p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
+          {(!user?.solde_credits || user.solde_credits <= 0) && (
+            <div className="p-4 border-l-4 border-amber-500 bg-amber-50 rounded-lg">
               <div className="flex items-start">
-                <Package className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <Package className="h-5 w-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-green-900">Choisissez un forfait</p>
-                  <p className="text-sm text-green-700 mt-1">
-                    Accédez à plus d'opportunités
+                  <p className="font-medium text-amber-900">Rechargez vos crédits</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Accédez aux demandes et débloquez plus d'opportunités
                   </p>
                   <Button 
                     size="sm" 
-                    className="mt-2"
-                    onClick={() => navigate('/freelancer/forfaits')}
+                    className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={() => navigate('/freelancer/credits')}
                   >
-                    Voir les forfaits
+                    Acheter des crédits
                   </Button>
                 </div>
               </div>

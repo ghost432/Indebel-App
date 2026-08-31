@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { profileService } from '../services/profileService'
 
 const Navbar = () => {
-  const { user, logout } = useAuth()
+  const { user, loading: authLoading, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -261,11 +261,25 @@ const Navbar = () => {
             </>
           )}
 
-          {!user && (
-            <div className="flex items-center justify-end lg:hidden">
+          {!authLoading && !user && (
+            <div className="flex items-center justify-end gap-2">
+              <div className="hidden items-center gap-2 lg:flex">
+                <Link
+                  to="/login"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#082151]/20 bg-white px-5 text-sm font-black text-[#082151] shadow-sm transition hover:border-[#082151] hover:bg-slate-50"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex h-10 items-center justify-center rounded-full bg-[#df6422] px-5 text-sm font-black text-white shadow-sm transition hover:bg-[#f07633]"
+                >
+                  S'inscrire
+                </Link>
+              </div>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-[#2A4DEF] shadow-sm transition hover:border-[#2A4DEF] hover:bg-slate-50"
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-[#2A4DEF] shadow-sm transition hover:border-[#2A4DEF] hover:bg-slate-50 lg:hidden"
                 aria-label="Ouvrir le menu principal"
                 aria-expanded={mobileMenuOpen}
               >
@@ -279,6 +293,24 @@ const Navbar = () => {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 py-4 px-4 space-y-2">
             {navItems.map((item) => <NavItem key={item.label} item={item} mobile />)}
+            {!authLoading && !user && (
+              <div className="grid grid-cols-2 gap-2 border-t border-slate-200 pt-4">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#082151]/20 bg-white px-3 text-center text-sm font-black text-[#082151]"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-[#df6422] px-3 text-center text-sm font-black text-white"
+                >
+                  S'inscrire
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>

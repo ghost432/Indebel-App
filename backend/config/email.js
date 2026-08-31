@@ -27,6 +27,43 @@ const getAdminEmails = () => {
 
 // Email templates
 const emailTemplates = {
+  // Notification Admin - Nouvel achat de crédits
+  creditPurchaseAdmin: (user, packAmount, totalHT, totalTTC) => ({
+    from: '"Indebel System" <noreply@indebel.be>',
+    to: getAdminEmails(),
+    subject: `💳 Nouvel achat de crédits : ${packAmount} crédits par ${user.prenom || ''} ${user.nom || user.denomination || 'un utilisateur'}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <h1 style="color: #3b82f6; margin: 0; font-size: 24px;">💳 Indebel Admin</h1>
+          </div>
+          <h2 style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Nouvel achat de crédits</h2>
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+            Un utilisateur vient d'acheter un pack de crédits sur la plateforme.
+          </p>
+          <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 18px; margin: 20px 0; border-radius: 6px;">
+            <ul style="margin: 0; padding-left: 15px; color: #374151; font-size: 14px; line-height: 1.8;">
+              <li><strong>Utilisateur :</strong> ${user.prenom || ''} ${user.nom || ''} ${user.denomination ? `(${user.denomination})` : ''}</li>
+              <li><strong>Email :</strong> ${user.email}</li>
+              <li><strong>Rôle :</strong> ${user.role === 'employer' ? 'Recruteur' : 'Prestataire'}</li>
+              <li><strong>Pack de crédits :</strong> ${packAmount} crédits</li>
+              <li><strong>Montant HT :</strong> ${totalHT ? totalHT.toFixed(2) : '0.00'} €</li>
+              <li><strong>Montant TTC (TVA 21%) :</strong> ${totalTTC ? totalTTC.toFixed(2) : '0.00'} €</li>
+              <li><strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</li>
+            </ul>
+          </div>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://pro.indebel.be'}/admin/credits" 
+               style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 26px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+              Voir dans l'administration
+            </a>
+          </div>
+        </div>
+      </div>
+    `
+  }),
+
   // Notification Admin - Nouvelle inscription
   newRegistrationAdmin: (user) => ({
     from: '"Indebel System" <noreply@indebel.be>',

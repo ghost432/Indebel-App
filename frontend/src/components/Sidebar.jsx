@@ -19,7 +19,9 @@ import {
   Receipt,
   Send,
   Bot,
-  X
+  X,
+  CreditCard,
+  Coins
 } from 'lucide-react'
 import VerificationBadge from './VerificationBadge'
 import UserBadges from './UserBadges'
@@ -116,9 +118,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           path: '/employer/mes-messages' 
         },
         { 
-          icon: Package, 
-          label: 'Forfaits', 
-          path: '/employer/forfaits' 
+          icon: CreditCard, 
+          label: 'Mes Crédits', 
+          path: '/employer/credits' 
+        },
+        { 
+          icon: Receipt, 
+          label: 'Mes Factures & Reçus', 
+          path: '/employer/factures' 
         },
         { 
           icon: LifeBuoy, 
@@ -202,9 +209,19 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           path: '/freelancer/verification' 
         },
         { 
-          icon: Package, 
-          label: 'Forfaits', 
-          path: '/freelancer/forfaits' 
+          icon: CreditCard, 
+          label: 'Mes Crédits', 
+          path: '/freelancer/credits' 
+        },
+        { 
+          icon: Receipt, 
+          label: 'Mes Factures & Reçus', 
+          path: '/freelancer/factures' 
+        },
+        { 
+          icon: CreditCard, 
+          label: 'Portefeuille', 
+          path: '/freelancer/portefeuille' 
         },
         { 
           icon: LifeBuoy, 
@@ -379,52 +396,83 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <div className={`mt-auto border-t flex-shrink-0 bg-gray-50 rounded-br-[20px] ${
           isOpen ? 'p-3' : 'p-2'
         }`}>
-          <Link 
-            to={user?.role === 'employer' ? '/employer/profile' : '/freelancer/profile'}
-            onClick={() => window.innerWidth < 1024 && toggleSidebar()}
-            className="flex items-center hover:bg-white/10 rounded-2xl p-2 -m-2 transition-colors"
-          >
+          <div className="flex items-center hover:bg-white/10 rounded-2xl p-2 -m-2 transition-colors">
             {isOpen ? (
-              <div className="flex items-center space-x-3 w-full">
-                <div className="relative">
-                  {profileImage ? (
-                    <img 
-                      src={profileImage} 
-                      alt={user?.prenom || 'Profil'} 
-                      className="h-10 w-10 rounded-full border-2 border-[#2A4DEF] object-cover ring-4 ring-white"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full border-2 border-[#2A4DEF] flex items-center justify-center font-medium ring-4 ring-white bg-gradient-to-br from-[#2b4eef] to-[#df6422] text-white font-bold">
-                      {profileService.getInitials(user, user?.role)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <p className="text-sm font-bold text-slate-900 truncate" title={user?.denomination || ''}>
-                        {profileService.getDisplayName(user, user?.role)}
-                      </p>
-                      {(user?.role === 'employer' || user?.role === 'freelancer') && (
-                        <VerificationBadge 
-                          status={user?.statut_verification || 'non_verifie'} 
-                          premium={user?.forfait_badge_premium}
-                          size="xs" 
-                          showText={false}
-                        />
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-slate-700 font-medium">
-                        {user?.role === 'employer' ? `Recruteur • ${user?.forfait_nom || 'Forfait inconnu'}` : 'Prestataire'}
-                        {(user?.forfait_nom && user?.role === 'freelancer') ? ` • ${user.forfait_nom}` : ''}
-                      </span>
+              <div className="flex items-center space-x-3 w-full min-w-0">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <Link 
+                    to={user?.role === 'employer' ? '/employer/profile' : '/freelancer/profile'}
+                    onClick={() => window.innerWidth < 1024 && toggleSidebar()}
+                    className="relative shrink-0"
+                  >
+                    {profileImage ? (
+                      <img 
+                        src={profileImage} 
+                        alt={user?.prenom || 'Profil'} 
+                        className="h-10 w-10 rounded-full border-2 border-[#2A4DEF] object-cover ring-4 ring-white"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full border-2 border-[#2A4DEF] flex items-center justify-center font-medium ring-4 ring-white bg-gradient-to-br from-[#2b4eef] to-[#df6422] text-white font-bold">
+                        {profileService.getInitials(user, user?.role)}
+                      </div>
+                    )}
+                  </Link>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col min-w-0">
+                      {/* Ligne 1 : Nom + Badge */}
+                      <Link 
+                        to={user?.role === 'employer' ? '/employer/profile' : '/freelancer/profile'}
+                        onClick={() => window.innerWidth < 1024 && toggleSidebar()}
+                        className="flex items-center space-x-1.5 group"
+                      >
+                        <p className="text-sm font-bold text-slate-900 truncate group-hover:text-primary-600 transition-colors" title={user?.denomination || ''}>
+                          {profileService.getDisplayName(user, user?.role)}
+                        </p>
+                        {(user?.role === 'employer' || user?.role === 'freelancer') && (
+                          <VerificationBadge 
+                            status={user?.statut_verification || 'non_verifie'} 
+                            premium={user?.forfait_badge_premium}
+                            size="xs" 
+                            showText={false}
+                          />
+                        )}
+                      </Link>
+
+                      {/* Ligne 2 : Rôle ET Solde de Crédits */}
+                      <div className="flex items-center justify-between gap-1 mt-0.5 min-w-0">
+                        <Link 
+                          to={user?.role === 'employer' ? '/employer/profile' : '/freelancer/profile'}
+                          onClick={() => window.innerWidth < 1024 && toggleSidebar()}
+                          className="text-xs text-slate-600 font-bold truncate hover:text-slate-900"
+                        >
+                          {user?.role === 'employer' ? 'Recruteur' : user?.role === 'admin' ? 'Admin' : 'Prestataire'}
+                        </Link>
+
+                        {user?.role !== 'admin' && (
+                          <Link
+                            to={user?.role === 'freelancer' ? '/freelancer/credits' : '/employer/credits'}
+                            onClick={() => {
+                              if (window.innerWidth < 1024) toggleSidebar()
+                            }}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100/90 text-amber-900 hover:bg-amber-200 transition-colors border border-amber-300/70 shadow-xs shrink-0"
+                            title="Voir mes crédits"
+                          >
+                            <Coins className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span>{user?.solde_credits || 0} crédit{(user?.solde_credits || 0) > 1 ? 's' : ''}</span>
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="flex justify-center w-full">
+              <Link 
+                to={user?.role === 'employer' ? '/employer/profile' : '/freelancer/profile'}
+                onClick={() => window.innerWidth < 1024 && toggleSidebar()}
+                className="flex justify-center w-full"
+              >
                 {profileImage ? (
                   <img 
                     src={profileImage} 
@@ -436,18 +484,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                     {profileService.getInitials(user, user?.role)}
                   </div>
                 )}
-              </div>
+              </Link>
             )}
-          </Link>
-          {isOpen && user?.role !== 'admin' && isFreePlan && (
-            <Link
-              to={forfaitPath}
-              onClick={() => window.innerWidth < 1024 && toggleSidebar()}
-              className="mt-3 block rounded-2xl border border-[#c02525]/20 bg-white px-3 py-2 text-center text-[11px] font-black uppercase tracking-[0.12em] text-[#c02525] shadow-sm animate-pulse"
-            >
-              Mettre à niveau votre forfait
-            </Link>
-          )}
+          </div>
         </div>
       </aside>
     </>

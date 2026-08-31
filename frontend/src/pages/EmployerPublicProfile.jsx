@@ -14,6 +14,7 @@ const EmployerPublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [publishedMissions, setPublishedMissions] = useState([]);
+  const [publishedDevis, setPublishedDevis] = useState([]);
   const [totalMissions, setTotalMissions] = useState(0);
   const [activeTab, setActiveTab] = useState('missions');
   
@@ -51,10 +52,12 @@ const EmployerPublicProfile = () => {
       const response = await api.get(`/users/${employerId}/published-missions`);
       if (response.data && response.data.success) {
         setPublishedMissions(response.data.missions || []);
+        setPublishedDevis(response.data.demandes_devis || []);
         setTotalMissions(response.data.total || 0);
       }
     } catch (error) {
       setPublishedMissions([]);
+      setPublishedDevis([]);
       setTotalMissions(0);
     }
   };
@@ -197,14 +200,21 @@ const EmployerPublicProfile = () => {
           <div className="flex gap-6 border-b border-slate-100 mb-6">
             <button 
               onClick={() => setActiveTab('missions')}
-              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'missions' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'missions' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Missions
+              Missions ({publishedMissions.length})
               {activeTab === 'missions' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-t-full"></div>}
             </button>
             <button 
+              onClick={() => setActiveTab('devis')}
+              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'devis' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Demandes de devis ({publishedDevis.length})
+              {activeTab === 'devis' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-t-full"></div>}
+            </button>
+            <button 
               onClick={() => setActiveTab('details')}
-              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'details' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'details' ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Détails
               {activeTab === 'details' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-t-full"></div>}
@@ -234,6 +244,52 @@ const EmployerPublicProfile = () => {
               ) : (
                 <div className="text-center py-10 text-slate-500 bg-slate-50 rounded-2xl">
                   Aucune mission publiée
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'devis' && (
+            <div className="space-y-4">
+              {publishedDevis.length > 0 ? (
+                publishedDevis.map((devis, index) => (
+                  <div key={index} className="p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-start gap-4">
+                      <h4 className="font-bold text-slate-900">{devis.titre}</h4>
+                      {devis.montant && (
+                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full whitespace-nowrap">
+                          {devis.montant} €
+                        </span>
+                      )}
+                    </div>
+                    {devis.description && (
+                      <p className="text-sm text-slate-600 mt-2 line-clamp-2">{devis.description}</p>
+                    )}
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-50">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400">
+                          {new Date(devis.date_creation).toLocaleDateString('fr-FR')}
+                        </span>
+                        {devis.statut && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            devis.statut === 'valide' || devis.statut === 'ouvert' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {devis.statut.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => navigate(`/devis/${devis.id}`)}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+                      >
+                        Voir le devis →
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10 text-slate-500 bg-slate-50 rounded-2xl">
+                  Aucune demande de devis publiée
                 </div>
               )}
             </div>

@@ -20,7 +20,7 @@ import axios from 'axios'
 import { API_BASE_URL } from '../config'
 
 const EmployerDashboard = () => {
-  const { user } = useAuth()
+  const { user, checkAuth } = useAuth()
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
   const [selectedJobApplications, setSelectedJobApplications] = useState([])
@@ -51,6 +51,15 @@ const EmployerDashboard = () => {
 
   useEffect(() => {
     document.title = 'Tableau de bord - Indebel'
+
+    // Vérifier les paramètres de retour de paiement Stripe
+    const searchParams = new URLSearchParams(window.location.search)
+    if (searchParams.get('payment_success') === 'true') {
+      const addedCredits = searchParams.get('credits')
+      toast.success(`🎉 Paiement réussi ! ${addedCredits ? `${addedCredits} crédits ont été ajoutés à votre solde.` : 'Vos crédits ont été ajoutés.'}`, { duration: 6000 })
+      if (checkAuth) checkAuth()
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
     
     // Flag pour éviter les mises à jour après unmount
     let isMounted = true

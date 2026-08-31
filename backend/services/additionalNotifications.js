@@ -646,5 +646,296 @@ module.exports = {
     } catch (error) {
       console.error('Erreur notification admins nouvel abonnement:', error);
     }
+  },
+
+  /**
+   * Notifier un utilisateur lorsque l'admin crédite ou débite son compte
+   */
+  async notifyCreditBalanceUpdate(user, action, amount, newBalance, reason) {
+    try {
+      const isAdd = action === 'add';
+      const actionTitle = isAdd ? '💳 Crédits ajoutés à votre compte' : '💳 Débit de crédits sur votre compte';
+      const userName = user.denomination || `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Utilisateur';
+      const motifText = reason || 'Ajustement d\'administration';
+
+      const inAppMessage = isAdd 
+        ? `L'équipe Indebel a crédité votre compte de ${amount} crédit(s) (Motif : ${motifText}). Votre nouveau solde est de ${newBalance} crédit(s).`
+        : `L'équipe Indebel a débité ${amount} crédit(s) de votre compte (Motif : ${motifText}). Votre nouveau solde est de ${newBalance} crédit(s).`;
+
+      const userLink = user.role === 'employer' ? '/employer/dashboard' : (user.role === 'admin' ? '/admin/credits' : '/freelancer/dashboard');
+
+      // 1. Notification In-App
+      await db.query(
+        'INSERT INTO notifications (user_id, type, titre, message, lien) VALUES (?, ?, ?, ?, ?)',
+        [
+          user.id,
+          'credit_update',
+          actionTitle,
+          inAppMessage,
+          userLink
+        ]
+      );
+
+      // 2. Email Notification (Envoi asynchrone non-bloquant)
+      const emailSubject = isAdd 
+        ? `💳 Indebel - Votre compte a été crédité de ${amount} crédit(s)` 
+        : `💳 Indebel - Mise à jour de votre solde de crédits`;
+
+      sendEmail({
+        to: user.email,
+        subject: emailSubject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <div style="text-align: center; margin-bottom: 25px;">
+                <h1 style="color: #3b82f6; margin: 0; font-size: 24px;">💳 Indebel</h1>
+              </div>
+
+              <h2 style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Mise à jour de votre solde de crédits</h2>
+
+              <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+                Bonjour <strong>${userName}</strong>,
+              </p>
+
+              <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+                L'équipe Indebel a effectué une mise à jour de votre solde de crédits sur la plateforme.
+              </p>
+
+              <div style="background-color: ${isAdd ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${isAdd ? '#10b981' : '#ef4444'}; padding: 18px; margin: 20px 0; border-radius: 6px;">
+                <h3 style="color: ${isAdd ? '#065f46' : '#991b1b'}; margin: 0 0 10px 0; font-size: 16px;">
+                  ${isAdd ? '➕ Crédits ajoutés' : '➖ Crédits débités'}
+                </h3>
+                <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Variation :</strong> ${isAdd ? `+${amount}` : `-${amount}`} crédit(s)</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Nouveau solde :</strong> ${newBalance} crédit(s)</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Motif :</strong> ${motifText}</p>
+              </div>
+
+              <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">
+                Vos crédits sont immédiatement utilisables pour réaliser vos actions (soumission de devis, candidatures, publication de missions, etc.).
+              </p>
+
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}${userLink}" 
+                   style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 26px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                  Accéder à mon tableau de bord
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+
+              <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 0;">
+                Toute l'équipe Indebel vous remercie pour votre confiance.<br/><br/>
+                Cordialement,<br/>
+                <strong>L'équipe Indebel</strong>
+              </p>
+            </div>
+          </div>
+        `
+      });
+
+      console.log(`✅ Notification In-App & Email de mise à jour de crédits envoyés à ${user.email}`);
+    } catch (error) {
+      console.error('Erreur notification solde crédits:', error);
+    }
+  },
+
+  /**
+   * Notification et Email de bienvenue avec Crédits Gratuits
+   */
+  async sendFreeCreditsWelcomeNotification(userId, userEmail, userName, userRole, freeCredits) {
+    try {
+      const userLink = userRole === 'employer' ? '/employer/credits' : '/freelancer/credits';
+
+      // 1. Notification In-App
+      await db.query(
+        'INSERT INTO notifications (user_id, type, titre, message, lien) VALUES (?, ?, ?, ?, ?)',
+        [
+          userId,
+          'welcome_credits',
+          '🎁 Crédits de bienvenue offerts !',
+          `Bienvenue sur Indebel ${userName} ! ${freeCredits} crédits gratuits ont été crédités sur votre compte pour tester la plateforme.`,
+          userLink
+        ]
+      );
+
+      // 2. Email Notification
+      await sendEmail({
+        to: userEmail,
+        subject: `🎁 Bienvenue sur Indebel - Vos ${freeCredits} crédits gratuits sont disponibles !`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <div style="text-align: center; margin-bottom: 25px;">
+                <h1 style="color: #3b82f6; margin: 0; font-size: 24px;">🎁 Indebel</h1>
+              </div>
+
+              <h2 style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Bienvenue sur Indebel !</h2>
+
+              <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+                Bonjour <strong>${userName}</strong>,
+              </p>
+
+              <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+                Pour vous souhaiter la bienvenue, l'équipe Indebel a le plaisir de vous offrir <strong>${freeCredits} crédits gratuits</strong> sur votre compte.
+              </p>
+
+              <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 18px; margin: 20px 0; border-radius: 6px;">
+                <h3 style="color: #065f46; margin: 0 0 10px 0; font-size: 16px;">
+                  ✨ Vos crédits de bienvenue
+                </h3>
+                <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Montant offert :</strong> ${freeCredits} crédits</p>
+                <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Statut :</strong> Disponibles immédiatement</p>
+              </div>
+
+              <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">
+                Profitez-en dès maintenant pour découvrir les fonctionnalités de la plateforme (rédaction de devis, postulations, publication de demandes, etc.).
+              </p>
+
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}${userLink}" 
+                   style="display: inline-block; background-color: #10b981; color: white; padding: 12px 26px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                  Voir mes crédits
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+
+              <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 0;">
+                L'équipe Indebel vous souhaite beaucoup de succès !<br/><br/>
+                Cordialement,<br/>
+                <strong>L'équipe Indebel</strong>
+              </p>
+            </div>
+          </div>
+        `
+      });
+
+      console.log(`✅ Notification et email de crédits gratuits de bienvenue envoyés à ${userEmail}`);
+    } catch (error) {
+      console.error('Erreur notification crédits gratuits de bienvenue:', error);
+    }
+  },
+
+  /**
+   * Envoi de notification et email en masse lors d'une distribution de crédits gratuits par l'admin
+   */
+  async sendMassFreeCreditsNotification(users, amount) {
+    try {
+      console.log(`[MassCredits] Distribution de ${amount} crédits à ${users.length} utilisateur(s)...`);
+      for (const user of users) {
+        const userName = user.denomination || `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Utilisateur';
+        const userLink = user.role === 'employer' ? '/employer/credits' : '/freelancer/credits';
+
+        // 1. Notification in-app
+        await db.query(
+          'INSERT INTO notifications (user_id, type, titre, message, lien) VALUES (?, ?, ?, ?, ?)',
+          [
+            user.id,
+            'free_credits_gift',
+            '🎁 Crédits gratuits offerts !',
+            `L'équipe Indebel vous a offert ${amount} crédits gratuits sur votre compte. Profitez-en dès maintenant !`,
+            userLink
+          ]
+        ).catch(e => console.error(`Erreur in-app mass credit user ${user.id}:`, e.message));
+
+        // 2. Email (async sans bloquer la boucle)
+        sendEmail({
+          to: user.email,
+          subject: `🎁 Indebel vous offre ${amount} crédits gratuits !`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+              <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <div style="text-align: center; margin-bottom: 25px;">
+                  <h1 style="color: #3b82f6; margin: 0; font-size: 24px;">🎁 Indebel</h1>
+                </div>
+
+                <h2 style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Cadeau de crédits gratuits !</h2>
+
+                <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+                  Bonjour <strong>${userName}</strong>,
+                </p>
+
+                <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+                  L'administration Indebel a le plaisir de vous créditer <strong>${amount} crédits gratuits</strong> sur votre compte.
+                </p>
+
+                <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 18px; margin: 20px 0; border-radius: 6px;">
+                  <h3 style="color: #065f46; margin: 0 0 10px 0; font-size: 16px;">
+                    🎉 Crédits ajoutés à votre solde
+                  </h3>
+                  <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Montant offert :</strong> +${amount} crédits</p>
+                  <p style="margin: 5px 0; color: #374151; font-size: 14px;"><strong>Motif :</strong> Offre exceptionnelle Indebel</p>
+                </div>
+
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.6;">
+                  Ces crédits sont immédiatement utilisables sur l'ensemble de la plateforme.
+                </p>
+
+                <div style="text-align: center; margin: 25px 0;">
+                  <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}${userLink}" 
+                     style="display: inline-block; background-color: #10b981; color: white; padding: 12px 26px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                    Voir mon solde de crédits
+                  </a>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+
+                <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 0;">
+                  Merci de faire partie de la communauté Indebel.<br/><br/>
+                  Cordialement,<br/>
+                  <strong>L'équipe Indebel</strong>
+                </p>
+              </div>
+            </div>
+          `
+        }).catch(e => console.error(`Erreur email mass credit user ${user.id}:`, e.message));
+      }
+      console.log(`✅ Mass credit notifications completed for ${users.length} users.`);
+    } catch (error) {
+      console.error('Erreur sendMassFreeCreditsNotification:', error);
+    }
+  },
+
+  /**
+   * Notifier les admins lors d'un nouvel achat de crédits via Stripe
+   */
+  async notifyAdminsNewCreditPurchase(userId, packAmount, totalHT) {
+    try {
+      // 1. Récupérer l'utilisateur
+      const [users] = await db.query('SELECT id, prenom, nom, email, role, denomination FROM users WHERE id = ?', [userId]);
+      if (!users.length) return;
+      const user = users[0];
+
+      const tva = totalHT * 0.21;
+      const totalTTC = totalHT + tva;
+
+      // 2. Envoyer email aux admins
+      if (emailTemplates.creditPurchaseAdmin) {
+        const emailConfig = emailTemplates.creditPurchaseAdmin(user, packAmount, totalHT, totalTTC);
+        await sendEmail(emailConfig);
+      }
+
+      // 3. Créer notification In-App pour tous les administrateurs
+      const [admins] = await db.query("SELECT id FROM users WHERE role = 'admin'");
+      const userName = user.denomination || `${user.prenom || ''} ${user.nom || ''}`.trim() || user.email;
+      
+      for (const admin of admins) {
+        await db.query(
+          'INSERT INTO notifications (user_id, type, titre, message, lien) VALUES (?, ?, ?, ?, ?)',
+          [
+            admin.id,
+            'credit_update',
+            '💳 Nouvel achat de crédits',
+            `${userName} a acheté un pack de ${packAmount} crédits (${totalTTC.toFixed(2)}€ TTC).`,
+            '/admin/credits'
+          ]
+        );
+      }
+
+      console.log(`✅ Admins notifiés de l'achat de ${packAmount} crédits par ${user.email}`);
+    } catch (error) {
+      console.error('Erreur notification admins achat crédits:', error);
+    }
   }
 };
+

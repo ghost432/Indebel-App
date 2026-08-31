@@ -38,7 +38,7 @@ exports.getUserFactures = async (req, res) => {
 };
 
 /**
- * Récupérer toutes les factures (Admin)
+ * Récupérer toutes les factures (Admin - Crédits Uniquement)
  */
 exports.getAllFactures = async (req, res) => {
   const connection = await db.getConnection();
@@ -53,11 +53,12 @@ exports.getAllFactures = async (req, res) => {
        FROM factures_forfaits f
        JOIN users u ON f.user_id = u.id
        LEFT JOIN forfaits fo ON f.forfait_id = fo.id
+       WHERE 1=1
     `;
     let params = [];
     
     if (req.user && req.user.email !== 'noreply@indebel.be' && req.user.role === 'admin') {
-      query += ' WHERE u.created_by = ? OR u.id = ?';
+      query += ' AND (u.created_by = ? OR u.id = ?)';
       params = [req.user.id, req.user.id];
     }
     
@@ -393,3 +394,79 @@ exports.envoyerCreditNoteMail = async (req, res) => {
     connection.release();
   }
 };
+
+/**
+ * Renvoyer une facture à Falco (Admin only)
+ */
+exports.retryFalco = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const { id } = req.params;
+
+    const [factures] = await connection.query(
+      'SELECT f.*, u.email, u.nom, u.prenom, u.denomination, u.numero_bce, u.adresse, u.telephone FROM factures_forfaits f JOIN users u ON f.user_id = u.id WHERE f.id = ?',
+      [id]
+    );
+
+    if (factures.length === 0) {
+      return res.status(404).json({ success: false, message: 'Facture introuvable' });
+    }
+
+    const facture = factures[0];
+    const user = {
+      email: facture.email,
+      nom: facture.nom,
+      prenom: facture.prenom,
+      denomination: facture.denomination,
+      numero_bce: facture.numero_bce,
+      adresse: facture.adresse,
+      telephone: facture.telephone
+    };
+
+    if (!FalcoService.isConfigured()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Configuration Falco incomplète: FALCO_APP_SECRET, FALCO_API_KEY et FALCO_SENDER_VAT_NUMBER sont requis'
+      });
+    }
+
+    const falcoResult = await FalcoService.sendInvoicePdf({
+      facture,
+      user,
+      pdfPath: facture.pdf_path
+    });
+
+    await connection.query(
+      `UPDATE factures_forfaits
+       SET falco_status = ?, falco_document_id = ?, falco_response = ?, falco_error = NULL, falco_sent_at = NOW()
+       WHERE id = ?`,
+      [
+        falcoResult.status,
+        falcoResult.documentId,
+        JSON.stringify(falcoResult.response || {}),
+        id
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Facture transmise avec succès à Falco',
+      data: falcoResult
+    });
+
+  } catch (error) {
+    console.error('Erreur retryFalco:', error);
+    await connection.query(
+      'UPDATE factures_forfaits SET falco_status = ?, falco_error = ? WHERE id = ?',
+      ['error', error.message, req.params.id]
+    );
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors de l\'envoi à Falco'
+    });
+  } finally {
+    connection.release();
+  }
+};
+

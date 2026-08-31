@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         const response = await api.get('/auth/me')
-        setUser(response.data.data)
+        const sanitizedUser = response.data?.data ? JSON.parse(JSON.stringify(response.data.data)) : null
+        setUser(sanitizedUser)
       } catch (error) {
         localStorage.removeItem('token')
       }
@@ -51,10 +52,11 @@ export const AuthProvider = ({ children }) => {
       // Recharger les données complètes de l'utilisateur depuis l'API
       try {
         const response = await api.get('/auth/me')
-        setUser(response.data.data)
+        const sanitizedUser = response.data?.data ? JSON.parse(JSON.stringify(response.data.data)) : null
+        setUser(sanitizedUser)
       } catch (error) {
         // Fallback sur les données fournies si l'API échoue
-        setUser(user)
+        setUser(user ? JSON.parse(JSON.stringify(user)) : null)
       }
       
       // Récupérer et supprimer l'URL de redirection
@@ -77,10 +79,11 @@ export const AuthProvider = ({ children }) => {
     // Recharger les données complètes de l'utilisateur depuis l'API
     try {
       const meResponse = await api.get('/auth/me')
-      setUser(meResponse.data.data)
+      const sanitizedUser = meResponse.data?.data ? JSON.parse(JSON.stringify(meResponse.data.data)) : null
+      setUser(sanitizedUser)
     } catch (error) {
       // Fallback sur les données retournées par le login
-      setUser(user)
+      setUser(user ? JSON.parse(JSON.stringify(user)) : null)
     }
     
     // Récupérer et supprimer l'URL de redirection
@@ -111,7 +114,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    checkAuth
+    checkAuth,
+    refreshUser: checkAuth
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

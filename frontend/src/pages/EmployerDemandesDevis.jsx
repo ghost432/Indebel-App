@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Eye, CheckCircle2, XCircle, AlertCircle, MapPin, CalendarDays, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FileText, Plus, Eye, CheckCircle2, XCircle, AlertCircle, MapPin, CalendarDays, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageLoader from '../components/PageLoader';
 import Table from '../components/Table';
@@ -12,6 +12,7 @@ import { API_BASE_URL } from '../config';
 const EmployerDemandesDevis = () => {
   const [demandes, setDemandes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedDemande, setSelectedDemande] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const navigate = useNavigate();
@@ -57,6 +58,28 @@ const EmployerDemandesDevis = () => {
     }
   };
 
+  const handleTerminerDemande = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_BASE_URL}/devis/${id}/terminer`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Demande de devis marquée comme terminée');
+      setSelectedDemande(null);
+      fetchDemandes();
+    } catch (error) {
+      console.error('Erreur marquer terminée:', error);
+      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const filteredDemandes = useMemo(() => {
+    if (statusFilter === 'all') return demandes;
+    if (statusFilter === 'active') return demandes.filter(d => d.statut !== 'termine' && d.statut !== 'refuse');
+    if (statusFilter === 'termine') return demandes.filter(d => d.statut === 'termine');
+    return demandes.filter(d => d.statut === statusFilter);
+  }, [demandes, statusFilter]);
+
   const columns = [
     {
       header: 'Projet',
@@ -89,9 +112,14 @@ const EmployerDemandesDevis = () => {
             break;
           case 'traite':
           case 'devis_complet':
-            styles = 'bg-green-50 text-green-700 border border-green-200';
+            styles = 'bg-indigo-50 text-indigo-700 border border-indigo-200';
             icon = <CheckCircle2 className="w-3 h-3 mr-1" />;
             text = 'Complet / Traité';
+            break;
+          case 'termine':
+            styles = 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold';
+            icon = <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />;
+            text = 'Terminé';
             break;
           case 'refuse':
             styles = 'bg-red-50 text-red-700 border border-red-200';
@@ -101,7 +129,7 @@ const EmployerDemandesDevis = () => {
         }
 
         return (
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles}`}>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles}`}>
             {icon}
             {text}
           </span>
@@ -133,16 +161,29 @@ const EmployerDemandesDevis = () => {
     {
       header: 'Actions',
       render: (row) => (
-        <div className="flex gap-2">
-          {/* Note: In future we could add a page to view the received devis for this request */}
+        <div className="flex gap-2 items-center">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => setSelectedDemande(row)}
             title="Voir les détails"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-4 h-4 mr-1" />
+            Détails
           </Button>
+
+          {row.statut !== 'termine' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleTerminerDemande(row.id)}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"
+              title="Marquer cette demande comme terminée"
+            >
+              <Check className="w-4 h-4 mr-1" />
+              Terminer
+            </Button>
+          )}
         </div>
       )
     }
@@ -162,7 +203,7 @@ const EmployerDemandesDevis = () => {
             <p className="text-slate-200 mt-1 text-sm md:text-base">Gérez vos demandes et consultez les devis reçus</p>
           </div>
         </div>
-        <div className="relative z-10">
+        <div className="relative z-10 flex items-center gap-3">
           <Button 
             onClick={() => navigate('/demande-devis')} 
             variant="white"
@@ -175,19 +216,59 @@ const EmployerDemandesDevis = () => {
         <div className="absolute right-0 top-0 w-64 h-64 bg-gradient-to-br from-[#2b4eef]/20 to-[#df6422]/20 rounded-full blur-3xl -mr-16 -mt-16 z-0 pointer-events-none"></div>
       </div>
 
+      {/* Filtres de statut */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            statusFilter === 'all'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          Toutes ({demandes.length})
+        </button>
+        <button
+          onClick={() => setStatusFilter('active')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            statusFilter === 'active'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          En cours / Actives ({demandes.filter(d => d.statut !== 'termine' && d.statut !== 'refuse').length})
+        </button>
+        <button
+          onClick={() => setStatusFilter('termine')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            statusFilter === 'termine'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          Terminées ({demandes.filter(d => d.statut === 'termine').length})
+        </button>
+      </div>
+
       <Card>
-        {demandes.length === 0 ? (
+        {filteredDemandes.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-900 mb-2">Aucune demande de devis</h3>
-            <p className="text-slate-500 mb-6">Vous n'avez pas encore créé de demande de devis pour vos projets.</p>
-            <Button onClick={() => navigate('/demande-devis')}>
-              Créer ma première demande
-            </Button>
+            <p className="text-slate-500 mb-6">
+              {statusFilter === 'all'
+                ? "Vous n'avez pas encore créé de demande de devis."
+                : "Aucune demande ne correspond à ce filtre."}
+            </p>
+            {statusFilter === 'all' && (
+              <Button onClick={() => navigate('/demande-devis')}>
+                Créer ma première demande
+              </Button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table columns={columns} data={demandes} />
+            <Table columns={columns} data={filteredDemandes} />
           </div>
         )}
       </Card>
@@ -270,14 +351,28 @@ const EmployerDemandesDevis = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
-              <Button onClick={() => setSelectedDemande(null)}>
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+              {selectedDemande.statut !== 'termine' ? (
+                <Button
+                  onClick={() => handleTerminerDemande(selectedDemande.id)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Marquer comme terminée
+                </Button>
+              ) : (
+                <span className="text-xs font-semibold px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full">
+                  ✓ Demande terminée
+                </span>
+              )}
+              <Button onClick={() => setSelectedDemande(null)} variant="outline">
                 Fermer
               </Button>
             </div>
           </div>
         </div>
       )}
+
       {/* Photo Enlarge Modal */}
       {selectedPhoto && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/90 p-4 backdrop-blur-sm" onClick={() => setSelectedPhoto(null)}>

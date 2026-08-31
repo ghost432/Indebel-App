@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { User, Mail, Briefcase, Calendar, Camera, Building2, Globe, Users as UsersIcon, FileText, Languages, AlertTriangle } from 'lucide-react'
+import { User, Mail, Briefcase, Calendar, Camera, Building2, Globe, Users as UsersIcon, FileText, Languages, AlertTriangle, Coins } from 'lucide-react'
 import { Facebook, Instagram, X } from 'lucide-react'
 import VerificationBadge from '../components/VerificationBadge'
 import { useAuth } from '../context/AuthContext'
@@ -447,17 +447,10 @@ const Profile = () => {
                     />
                   </div>
                 </div>
-                {user?.role === 'employer' && user?.forfait_nom && (
-                  <span 
-                    className="text-xs font-medium px-2 py-1 rounded-full"
-                    style={{ 
-                      backgroundColor: user?.forfait_couleur ? `${user.forfait_couleur}20` : '#EFF6FF', 
-                      color: user?.forfait_couleur || '#1E40AF'
-                    }}
-                  >
-                    {user.forfait_nom === 'Gratuit' ? 'Forfait Gratuit' : user.forfait_nom}
-                  </span>
-                )}
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 shadow-sm flex items-center gap-1.5 mt-1">
+                  <Coins className="w-3.5 h-3.5 text-amber-500" />
+                  Solde : {user?.solde_credits || 0} Crédits
+                </span>
               </div>
               <div className="flex justify-center mb-4">
                 {getRoleBadge(user?.role)}
@@ -1204,31 +1197,7 @@ const Profile = () => {
                     <p className="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd sur Mac) pour sélectionner plusieurs langues</p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Calendar className="h-4 w-4 inline mr-2" />
-                      Période de disponibilité
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Date de début"
-                        name="disponibilite_debut"
-                        type="date"
-                        value={proFormData.disponibilite_debut}
-                        onChange={handleProChange}
-                        placeholder="Date de début"
-                      />
-                      <Input
-                        label="Date de fin"
-                        name="disponibilite_fin"
-                        type="date"
-                        value={proFormData.disponibilite_fin}
-                        onChange={handleProChange}
-                        placeholder="Date de fin"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Indiquez votre période de disponibilité pour de nouvelles missions</p>
-                  </div>
+
 
                   <div className="space-y-2">
                     <Input
@@ -1414,19 +1383,7 @@ const Profile = () => {
                     </div>
                   )}
 
-                  {(user?.disponibilite_debut || user?.disponibilite_fin) && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 flex items-center mb-1">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Période de disponibilité
-                      </label>
-                      <p className="text-gray-900">
-                        {user?.disponibilite_debut && new Date(user.disponibilite_debut).toLocaleDateString('fr-FR')}
-                        {user?.disponibilite_debut && user?.disponibilite_fin && ' au '}
-                        {user?.disponibilite_fin && new Date(user.disponibilite_fin).toLocaleDateString('fr-FR')}
-                      </p>
-                    </div>
-                  )}
+
 
                   {user?.portfolio_url && (
                     <div>

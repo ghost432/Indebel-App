@@ -147,15 +147,19 @@ class FactureService {
         if (facture.date_expiration) {
           const dateFin = new Date(facture.date_expiration);
           periode += ` - ${this.formaterDate(dateFin)}`;
+        } else if (facture.forfait_nom && facture.forfait_nom.includes('Crédit')) {
+          periode = 'Crédits Indebel';
         } else {
           periode += ' - Illimité';
         }
+
+        const subTitle = (facture.forfait_nom && facture.forfait_nom.includes('Crédit')) ? 'Achat de crédits Indebel' : 'Abonnement Indebel';
 
         doc.roundedRect(46, itemY - 16, 504, 62, 14).fill('#f8fafc');
         doc.font('Helvetica-Bold').fontSize(10.5).fillColor(darkColor);
         doc.text(facture.forfait_nom, 66, itemY, { width: 190 });
         doc.font('Helvetica').fontSize(8.8).fillColor(mutedColor);
-        doc.text('Abonnement Indebel', 66, itemY + 16, { width: 190 });
+        doc.text(subTitle, 66, itemY + 16, { width: 190 });
         doc.fontSize(9.2).fillColor(darkColor);
         doc.text(periode, 286, itemY, { width: 120 });
         doc.font('Helvetica-Bold').fontSize(10.5).fillColor(darkColor);
@@ -400,6 +404,138 @@ class FactureService {
 
     } catch (error) {
       console.error('Erreur lors de la création de la facture:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crée une facture pour un achat de crédits
+   */
+  static async creerFactureCredits(connection, userId, packAmount, totalHT) {
+    try {
+      const [forfaits] = await connection.query('SELECT id FROM forfaits LIMIT 1');
+      const defaultForfaitId = forfaits.length > 0 ? forfaits[0].id : 1;
+
+      const [users] = await connection.query('SELECT * FROM users WHERE id = ?', [userId]);
+      if (users.length === 0) {
+        throw new Error('Utilisateur introuvable');
+      }
+
+      const user = users[0];
+      const numeroFacture = await this.genererNumeroFacture(connection, false);
+      const montants = this.calculerMontants(totalHT);
+      const descriptionPack = `Pack de ${packAmount} Crédits Indebel`;
+      const dateSouscription = new Date();
+
+      const [result] = await connection.query(
+        `INSERT INTO factures_forfaits 
+        (numero_facture, user_id, forfait_id, forfait_nom, montant_ht, tva_pourcentage, 
+         montant_tva, montant_ttc, date_souscription, date_expiration, duree_mois, statut) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 'payee')`,
+        [
+          numeroFacture,
+          userId,
+          defaultForfaitId,
+          descriptionPack,
+          montants.montantHT,
+          montants.tvaPourcentage,
+          montants.montantTVA,
+          montants.montantTTC,
+          dateSouscription
+        ]
+      );
+
+      const factureId = result.insertId;
+
+      const [factures] = await connection.query(
+        'SELECT * FROM factures_forfaits WHERE id = ?',
+        [factureId]
+      );
+
+      const facture = factures[0];
+
+      // Générer le PDF de la facture de crédits
+      const pdfPath = await this.genererPDF(facture, user);
+
+      await connection.query(
+        'UPDATE factures_forfaits SET pdf_path = ? WHERE id = ?',
+        [pdfPath, factureId]
+      );
+
+      // Transmettre à Falco
+      let falcoResult = null;
+      try {
+        falcoResult = await FalcoService.sendInvoicePdf({
+          facture: { ...facture, pdf_path: pdfPath },
+          user,
+          pdfPath
+        });
+
+        await connection.query(
+          `UPDATE factures_forfaits
+           SET falco_status = ?, falco_document_id = ?, falco_response = ?, falco_error = NULL, falco_sent_at = NOW()
+           WHERE id = ?`,
+          [
+            falcoResult.status,
+            falcoResult.documentId,
+            JSON.stringify(falcoResult.response || {}),
+            factureId
+          ]
+        );
+        console.log(`✅ Facture Crédits ${numeroFacture} envoyée à Falco`);
+
+        try {
+          await sendEmail({
+            to: getAdminEmails(),
+            subject: `✅ Facture Crédits envoyée à Falco - ${numeroFacture}`,
+            html: `
+              <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px;background:#f8fafc;border-radius:12px">
+                <div style="background:#0f172a;color:#fff;padding:22px;border-radius:10px;margin-bottom:18px">
+                  <h2 style="margin:0;font-size:22px">Facture Crédits envoyée à Falco</h2>
+                  <p style="margin:8px 0 0;color:#cbd5e1">La facture d'achat de crédits a bien été transmise à Falco.</p>
+                </div>
+                <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden">
+                  <tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><strong>Facture</strong></td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${numeroFacture}</td></tr>
+                  <tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><strong>Client</strong></td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${user.prenom || ''} ${user.nom || ''} (${user.email})</td></tr>
+                  <tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><strong>Produit</strong></td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${descriptionPack}</td></tr>
+                  <tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><strong>Montant TTC</strong></td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${parseFloat(facture.montant_ttc).toFixed(2)} €</td></tr>
+                  <tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb"><strong>Statut Falco</strong></td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${falcoResult.status}</td></tr>
+                </table>
+              </div>
+            `
+          });
+        } catch (emailErr) {
+          console.error(`Erreur email admin Falco facture ${numeroFacture}:`, emailErr.message);
+        }
+      } catch (falcoError) {
+        const responseData = falcoError.response?.data || null;
+        const status = falcoError.response?.status ? `error_${falcoError.response.status}` : 'error';
+        const message = responseData ? JSON.stringify(responseData) : falcoError.message;
+
+        await connection.query(
+          `UPDATE factures_forfaits
+           SET falco_status = ?, falco_response = ?, falco_error = ?
+           WHERE id = ?`,
+          [
+            status,
+            responseData ? JSON.stringify(responseData) : null,
+            message,
+            factureId
+          ]
+        );
+        console.error(`❌ Erreur Falco facture Crédits ${numeroFacture}:`, message);
+      }
+
+      console.log(`✅ Facture Crédits ${numeroFacture} créée pour l'utilisateur ${user.email}`);
+
+      return {
+        ...facture,
+        pdf_path: pdfPath,
+        falco: falcoResult
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la création de la facture de crédits:', error);
       throw error;
     }
   }

@@ -17,6 +17,7 @@ router.get('/stats', authenticate, missionController.getMissionStats);
 router.get('/disponibles', authenticate, missionController.getMissionsDisponibles);
 router.post('/ignorer', authenticate, missionController.ignorerMission);
 router.put('/:id/status', authenticate, missionController.updateMissionStatus);
+router.get('/:id/visibility', authenticate, missionController.getMissionVisibility);
 router.delete('/:id', authenticate, missionController.deleteMission);
 router.post('/:id/view', authenticate, missionController.logMissionViewAction);
 

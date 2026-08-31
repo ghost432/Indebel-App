@@ -134,7 +134,11 @@ exports.getUserById = async (req, res, next) => {
 // Update user
 exports.updateUser = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    let targetId = req.params.id;
+    if (!targetId || targetId === 'profile') {
+      targetId = req.user?.id;
+    }
+
     const { facebook, instagram, reseaux_sociaux, ...otherFields } = req.body;
     const fields = [];
     const values = [];
@@ -142,7 +146,11 @@ exports.updateUser = async (req, res, next) => {
     // Mapping des champs frontend vers colonnes BDD
     const fieldMapping = {
       'description_recruteur': 'description_entreprise',
-      'taille_recruteur': 'taille_entreprise'
+      'taille_recruteur': 'taille_entreprise',
+      'photo_couverture': 'image_couverture',
+      'cover_image_url': 'image_couverture',
+      'profile_image_url': 'photo_profil',
+      'avatar': 'photo_profil'
     };
 
     // Appliquer le mapping
@@ -156,37 +164,65 @@ exports.updateUser = async (req, res, next) => {
     const fs = require('fs');
     const path = require('path');
     const saveBase64Image = (base64String, prefix, userId) => {
-      if (!base64String || typeof base64String !== 'string' || !base64String.startsWith('data:image/')) return base64String;
-      try {
-        const matches = base64String.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-        if (matches) {
-          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-          const data = matches[2];
-          const filename = `user_${userId}_${prefix}_${Date.now()}.${ext}`;
+      if (!base64String || typeof base64String !== 'string') return base64String;
+
+      if (base64String.startsWith('http://') || base64String.startsWith('https://') || base64String.startsWith('/api/')) {
+        return base64String;
+      }
+
+      const isBase64 = base64String.includes(';base64,') || base64String.length > 500;
+      if (isBase64) {
+        try {
+          let ext = 'jpg';
+          let cleanData = base64String;
+
+          if (base64String.includes(';base64,')) {
+            const parts = base64String.split(';base64,');
+            const header = parts[0];
+            cleanData = parts[1];
+            const mimeMatch = header.match(/data:image\/([a-zA-Z0-9\+\-]+)/);
+            if (mimeMatch && mimeMatch[1]) {
+              ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1];
+            }
+          }
+
+          cleanData = cleanData.replace(/[\r\n\s]/g, '');
+          const filename = `user_${userId || 'profile'}_${prefix}_${Date.now()}.${ext}`;
           const profilesDir = path.join(__dirname, '../public/uploads/profiles');
           if (!fs.existsSync(profilesDir)) {
             fs.mkdirSync(profilesDir, { recursive: true });
           }
-          fs.writeFileSync(path.join(profilesDir, filename), Buffer.from(data, 'base64'));
+          fs.writeFileSync(path.join(profilesDir, filename), Buffer.from(cleanData, 'base64'));
+          console.log(`📸 Image de couverture enregistrée sous : /api/uploads/profiles/${filename}`);
           return `/api/uploads/profiles/${filename}`;
+        } catch (err) {
+          console.error('Erreur sauvegarde image base64:', err);
+          return null;
         }
-      } catch (err) {
-        console.error('Erreur sauvegarde image:', err);
       }
       return base64String;
     };
 
     if (otherFields.photo_profil) {
-      otherFields.photo_profil = saveBase64Image(otherFields.photo_profil, 'photo', id);
+      otherFields.photo_profil = saveBase64Image(otherFields.photo_profil, 'photo', targetId);
     }
     if (otherFields.image_couverture) {
-      otherFields.image_couverture = saveBase64Image(otherFields.image_couverture, 'cover', id);
+      otherFields.image_couverture = saveBase64Image(otherFields.image_couverture, 'cover', targetId);
     }
 
-    // Retirer les champs qui n'existent pas dans la BDD
+    // Retirer les champs virtuels et non-existants dans la table BDD users
     delete otherFields.ville;
     delete otherFields.province;
     delete otherFields.code_postal;
+    delete otherFields.photo_couverture;
+    delete otherFields.cover_image_url;
+    delete otherFields.profile_image_url;
+    delete otherFields.avatar;
+    delete otherFields.bce_verifie;
+    delete otherFields.forfait_nom;
+    delete otherFields.forfait_couleur;
+    delete otherFields.forfait_badge_premium;
+    delete otherFields.verification_identite_status;
 
     // Gérer les réseaux sociaux individuels (ancienne méthode)
     if (facebook !== undefined) {
@@ -258,17 +294,43 @@ exports.updateUser = async (req, res, next) => {
           values.push(value);
         }
       }
-      // Handle date fields - convert ISO date to MySQL DATE format (YYYY-MM-DD)
+      // Handle date fields - convert DD/MM/YYYY, YYYY/MM/DD or ISO date to MySQL DATE format (YYYY-MM-DD)
       else if (key === 'disponibilite_debut' || key === 'disponibilite_fin' || key === 'date_debut' || key === 'date_fin') {
         if (value === '' || value === null || value === undefined) {
           fields.push(`${key} = ?`);
           values.push(null);
         } else {
-          // Convert ISO date string to YYYY-MM-DD format
-          const date = new Date(value);
-          const formattedDate = date.toISOString().split('T')[0]; // Get only YYYY-MM-DD part
+          let formattedDate = null;
+          try {
+            if (typeof value === 'string' && value.includes('/')) {
+              const parts = value.split('/');
+              if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                  // Format YYYY/MM/DD
+                  const year = parts[0];
+                  const month = parts[1].padStart(2, '0');
+                  const day = parts[2].padStart(2, '0');
+                  formattedDate = `${year}-${month}-${day}`;
+                } else {
+                  // Format DD/MM/YYYY
+                  const day = parts[0].padStart(2, '0');
+                  const month = parts[1].padStart(2, '0');
+                  const year = parts[2];
+                  formattedDate = `${year}-${month}-${day}`;
+                }
+              }
+            }
+            if (!formattedDate) {
+              const date = new Date(value);
+              if (!isNaN(date.getTime())) {
+                formattedDate = date.toISOString().split('T')[0];
+              }
+            }
+          } catch (e) {
+            console.error(`Erreur formatage date pour ${key}:`, e);
+          }
           fields.push(`${key} = ?`);
-          values.push(formattedDate);
+          values.push(formattedDate || null);
         }
       }
       else {
@@ -281,7 +343,7 @@ exports.updateUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No fields to update' });
     }
 
-    values.push(id);
+    values.push(targetId);
     const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
 
     console.log('Update SQL:', sql);
@@ -296,7 +358,7 @@ exports.updateUser = async (req, res, next) => {
     // Si c'est un sous-admin qui a mis à jour l'utilisateur, notifier les super admins
     if (req.user && req.user.role === 'admin' && req.user.email !== 'admin@indebel.com' && req.user.email !== 'indegobelgique@gmail.com') {
       const subAdminName = req.user.prenom || 'Un sous-admin';
-      const actionMessage = `A mis à jour le profil de l'utilisateur avec l'ID : ${id}`;
+      const actionMessage = `A mis à jour le profil de l'utilisateur avec l'ID : ${targetId}`;
       await notificationService.notifySubAdminAction(
         req.user.id,
         subAdminName,
@@ -308,7 +370,10 @@ exports.updateUser = async (req, res, next) => {
     res.status(200).json({ success: true, message: 'User updated successfully' });
   } catch (error) {
     console.error('Update user error:', error);
-    next(error);
+    return res.status(500).json({
+      success: false,
+      message: error?.sqlMessage || error?.message || 'Erreur lors de la mise à jour du profil'
+    });
   }
 };
 

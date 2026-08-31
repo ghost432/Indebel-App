@@ -5,7 +5,7 @@ require('dotenv').config();
 exports.authenticate = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1];
+    const token = authHeader?.split(' ')[1] || req.query?.token;
 
     // Log réduit pour développement
     if (!token) {

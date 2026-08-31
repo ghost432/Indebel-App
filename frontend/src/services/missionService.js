@@ -88,5 +88,12 @@ export const missionService = {
       { type: mission_type, statut },
       { headers: getAuthHeaders() }
     )
+  },
+
+  // Récupérer les données de visibilité d'une mission (admin)
+  getVisibility: (mission_id) => {
+    return axios.get(`${API_URL}/${mission_id}/visibility`, {
+      headers: getAuthHeaders()
+    })
   }
 }

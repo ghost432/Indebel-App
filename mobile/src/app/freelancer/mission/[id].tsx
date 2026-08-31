@@ -324,7 +324,9 @@ export default function MissionDetailModal() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.employerRoleLabel}>Entreprise / Employeur</Text>
                     <Text style={styles.employerFullName}>
-                      {mission.denomination || mission.entreprise || `${mission.prenom || ''} ${mission.nom || ''}`.trim() || 'Employeur Indebel'}
+                      {mission.prenom || mission.nom || mission.employer_prenom || mission.employer_nom
+                        ? `${mission.prenom || mission.employer_prenom || ''} ${mission.nom || mission.employer_nom || ''}`.trim()
+                        : (mission.denomination || mission.entreprise || mission.client_denomination || 'Client Indebel')}
                     </Text>
                     {Boolean((mission.prenom || mission.nom) && (mission.denomination || mission.entreprise)) && (
                       <Text style={styles.employerContactPerson}>

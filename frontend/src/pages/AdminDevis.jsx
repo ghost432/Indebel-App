@@ -7,12 +7,14 @@ import Modal from '../components/Modal'
 import Pagination from '../components/Pagination'
 import DevisCard, { formatDate, formatMoney } from '../components/devis/DevisCard'
 import { devisService } from '../services/devisService'
+import { API_BASE_URL } from '../config'
 
 const filters = [
   ['all', 'Tous'],
   ['en_attente', 'En attente'],
   ['valide', 'Client trouvé'],
   ['traite', 'Traité'],
+  ['termine', 'Terminé'],
   ['devis_complet', 'Complet'],
   ['retire_liste', 'Retiré'],
   ['refuse', 'Refusé']
@@ -23,6 +25,7 @@ const statLabels = {
   en_attente: 'En attente',
   valide: 'Client trouvé',
   traite: 'Traité',
+  termine: 'Terminé',
   devis_complet: 'Complet',
   retire_liste: 'Retiré'
 }
@@ -61,7 +64,8 @@ const AdminDevis = () => {
     }
     if (typeof finalUrl !== 'string' || !finalUrl) return ''
     if (finalUrl.startsWith('http') || finalUrl.startsWith('data:')) return finalUrl
-    return finalUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${finalUrl}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${finalUrl}`
+    const baseUrl = API_BASE_URL.replace(/\/api$/, '')
+    return finalUrl.startsWith('/uploads') ? `${baseUrl}${finalUrl}` : `${baseUrl}/uploads/${finalUrl}`
   }
 
   const statCards = useMemo(() => Object.entries(statLabels).map(([key, label]) => ({
@@ -405,6 +409,10 @@ const AdminDevis = () => {
                   <Button onClick={() => action(selected.id, 'traiter', 'Demande marquée traitée')} className="w-full justify-center bg-[#082151] hover:bg-[#0d2f6f] text-white shadow-sm hover:shadow-md">
                     <FileText className="h-4 w-4 mr-2" />
                     Marquer traité
+                  </Button>
+                  <Button onClick={() => action(selected.id, 'terminer', 'Demande marquée terminée')} className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md">
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Marquer terminé
                   </Button>
                   <Button onClick={() => action(selected.id, 'retirer-liste', 'Demande retirée des listes')} variant="outline" className="w-full justify-center bg-white border-slate-200 hover:bg-slate-50">
                     Retirer de la liste

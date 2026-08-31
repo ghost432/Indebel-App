@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import QuotaModal from '../components/devis/QuotaModal'
+import HowItWorksModal from '../components/devis/HowItWorksModal'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import {
@@ -11,6 +12,7 @@ import {
   CheckCircle2,
   ClipboardList,
   FileText,
+  HelpCircle,
   Home,
   MapPin,
   Send,
@@ -54,15 +56,45 @@ const emptyForm = (categorie = '') => ({
   telephone: ''
 })
 
+const toMetierSlug = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/&/g, 'et')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '')
+
 export default function DemandeDevis() {
+  const params = useParams()
   const [searchParams] = useSearchParams()
-  const [formData, setFormData] = useState(emptyForm(searchParams.get('categorie') || ''))
+
+  const getCategoryFromUrl = () => {
+    let cat = searchParams.get('categorie')
+    if (!cat) {
+      const pathSegment = params.categorieParam || params['*'] || ''
+      if (pathSegment) {
+        if (pathSegment.startsWith('categorie=')) {
+          cat = pathSegment.substring(10)
+        } else if (pathSegment.includes('categorie=')) {
+          cat = pathSegment.split('categorie=')[1]
+        } else {
+          cat = pathSegment
+        }
+      }
+    }
+    return cat ? decodeURIComponent(cat).trim() : ''
+  }
+
+  const [formData, setFormData] = useState(emptyForm(getCategoryFromUrl()))
   const [photos, setPhotos] = useState([])
   const [sectors, setSectors] = useState(FALLBACK_SECTORS)
+  const [metierPage, setMetierPage] = useState(null)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1)
   const [showQuotaModal, setShowQuotaModal] = useState(false)
   const [quotaMessage, setQuotaMessage] = useState('')
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false)
   const fileRef = useRef()
   const provinces = getProvincesForRegion(formData.region)
   const communes = getCommunesForRegionAndProvince(formData.region, formData.province)
@@ -71,7 +103,16 @@ export default function DemandeDevis() {
   useEffect(() => {
     document.title = 'Demande de devis gratuit - Indebel'
     loadSectors()
-  }, [])
+
+    const hasSeen = localStorage.getItem('indebel_how_it_works_seen')
+    if (!hasSeen) {
+      const timer = setTimeout(() => {
+        setShowHowItWorksModal(true)
+        localStorage.setItem('indebel_how_it_works_seen', 'true')
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [params.categorieParam, searchParams])
 
   const loadSectors = async () => {
     try {
@@ -80,9 +121,44 @@ export default function DemandeDevis() {
         .filter((sector) => Number(sector.actif ?? 1) === 1)
         .map((sector) => String(sector.nom || '').trim())
         .filter(Boolean)
-      if (nextSectors.length) setSectors(nextSectors)
+
+      const activeSectors = nextSectors.length ? nextSectors : FALLBACK_SECTORS
+      setSectors(activeSectors)
+
+      const paramCat = getCategoryFromUrl()
+      if (paramCat) {
+        const paramLower = paramCat.toLowerCase()
+        const matched = activeSectors.find(
+          (s) => s.toLowerCase() === paramLower || s.toLowerCase().includes(paramLower) || paramLower.includes(s.toLowerCase())
+        )
+        setFormData((prev) => ({ ...prev, categorie: matched || paramCat }))
+        loadMetierPage(paramCat)
+      }
     } catch (error) {
       setSectors(FALLBACK_SECTORS)
+      const paramCat = getCategoryFromUrl()
+      if (paramCat) {
+        const paramLower = paramCat.toLowerCase()
+        const matched = FALLBACK_SECTORS.find(
+          (s) => s.toLowerCase() === paramLower || s.toLowerCase().includes(paramLower) || paramLower.includes(s.toLowerCase())
+        )
+        setFormData((prev) => ({ ...prev, categorie: matched || paramCat }))
+        loadMetierPage(paramCat)
+      }
+    }
+  }
+
+  const loadMetierPage = async (category) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/metiers/${toMetierSlug(category)}`)
+      const page = response.data?.data || null
+      setMetierPage(page)
+      if (page) {
+        document.title = `${page.titre} - Indebel`
+        document.querySelector('meta[name="description"]')?.setAttribute('content', page.introduction)
+      }
+    } catch {
+      setMetierPage(null)
     }
   }
 
@@ -104,11 +180,34 @@ export default function DemandeDevis() {
 
   const removePhoto = (index) => setPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index))
 
+  const readFileAsDataUrl = (file) => new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.readAsDataURL(file)
+  })
+
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const required = ['typeTravaux', 'description', 'adresse', 'codePostal', 'region', 'ville', 'prenom', 'nom', 'email', 'telephone']
-    if (required.some((field) => !formData[field])) return toast.error('Veuillez remplir tous les champs obligatoires')
-    if (provinces.length > 0 && !formData.province) return toast.error('Veuillez sélectionner une province')
+    
+    if (currentStep === 1) {
+      const requiredStep1 = ['typeTravaux', 'description']
+      if (requiredStep1.some((field) => !formData[field])) return toast.error('Veuillez remplir tous les champs obligatoires du descriptif')
+      setCurrentStep(2)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    if (currentStep === 2) {
+      const requiredStep2 = ['adresse', 'codePostal', 'region', 'ville']
+      if (requiredStep2.some((field) => !formData[field])) return toast.error('Veuillez remplir tous les champs obligatoires du lieu')
+      if (provinces.length > 0 && !formData.province) return toast.error('Veuillez sélectionner une province')
+      setCurrentStep(3)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    const requiredStep3 = ['prenom', 'nom', 'email', 'telephone']
+    if (requiredStep3.some((field) => !formData[field])) return toast.error('Veuillez remplir vos coordonnées')
 
     try {
       setLoading(true)
@@ -156,6 +255,39 @@ export default function DemandeDevis() {
     }
   }
 
+  const inputClass = "w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#2A4DEF]"
+
+  const Step = ({ icon: Icon, title, text }) => (
+    <div className="flex gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-[#2A4DEF]">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-sm font-black text-[#082151]">{title}</p>
+        <p className="text-xs font-semibold text-slate-500">{text}</p>
+      </div>
+    </div>
+  )
+
+  const FormSection = ({ icon: Icon, title, children }) => (
+    <div className="p-5 sm:p-7">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#082151]/5 text-[#082151]">
+          <Icon className="h-5 w-5" />
+        </div>
+        <h2 className="text-lg font-black text-[#082151]">{title}</h2>
+      </div>
+      <div className="grid gap-5">{children}</div>
+    </div>
+  )
+
+  const Field = ({ label, children }) => (
+    <div className="space-y-1.5">
+      <label className="text-xs font-black uppercase tracking-wider text-slate-500">{label}</label>
+      {children}
+    </div>
+  )
+
   if (submitted) {
     return (
       <main className="min-h-screen bg-[#f5f8ff] px-4 py-12">
@@ -188,13 +320,23 @@ export default function DemandeDevis() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(42,77,239,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(192,37,37,0.35),transparent_34%)]" />
         <div className="relative mx-auto max-w-6xl text-center sm:text-left">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/80">
-              <Sparkles className="h-4 w-4" />
-              Devis gratuit
-            </span>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              <button
+                type="button"
+                onClick={() => setShowHowItWorksModal(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-[#2A4DEF] px-4 py-2 text-xs font-black uppercase tracking-[0.15em] text-white hover:bg-[#1b3bc4] transition-all shadow-lg shadow-[#2A4DEF]/30 active:scale-95 cursor-pointer"
+              >
+                <HelpCircle className="h-4 w-4" />
+                Comment ça marche ?
+              </button>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/80">
+                <Sparkles className="h-4 w-4" />
+                Devis gratuit
+              </span>
+            </div>
             <h1 className="mt-5 text-4xl font-black leading-tight sm:text-5xl">Décrivez votre projet, recevez des devis qualifiés</h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/75 sm:mx-0 mx-auto">
-              Une demande claire, validée par Indebel, puis transmise aux prestataires disponibles dans votre région.
+              {metierPage?.introduction || 'Une demande claire, validée par Indebel, puis transmise aux prestataires disponibles dans votre région.'}
             </p>
           </div>
         </div>
@@ -211,142 +353,200 @@ export default function DemandeDevis() {
         </aside>
 
         <form onSubmit={handleSubmit} className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl shadow-[#082151]/8">
-          <FormSection icon={ClipboardList} title="Détails du projet">
-            <Field label="Type de travaux *">
-              <input name="typeTravaux" value={formData.typeTravaux} onChange={handleChange} className={inputClass} placeholder="Ex: rénovation salle de bain" required />
-            </Field>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Secteur">
-                <select name="categorie" value={formData.categorie} onChange={handleChange} className={inputClass}>
-                  <option value="">Sélectionnez un secteur</option>
-                  {sectors.map((sector) => <option key={sector} value={sector}>{sector}</option>)}
-                </select>
-              </Field>
-              <Field label="Priorité">
-                <select name="urgence" value={formData.urgence} onChange={handleChange} className={inputClass}>
-                  {URGENCES.map((urgence) => <option key={urgence.value} value={urgence.value}>{urgence.label}</option>)}
-                </select>
-              </Field>
+          
+          {/* STEP INDICATOR */}
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:px-7">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs sm:h-8 sm:w-8 sm:text-sm font-black transition-colors ${currentStep >= 1 ? 'bg-[#082151] text-white' : 'bg-[#082151]/10 text-[#082151]'}`}>1</span>
+              <span className={`hidden text-sm font-black transition-colors sm:inline-block ${currentStep >= 1 ? 'text-[#082151]' : 'text-slate-400'}`}>Descriptif</span>
             </div>
-
-            <Field label="Description du projet *">
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={5} className={`${inputClass} resize-y`} placeholder="Décrivez vos besoins, vos contraintes et le résultat attendu." required />
-            </Field>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Budget estimé (en €)">
-                <input type="number" name="budgetEstime" value={formData.budgetEstime} onChange={handleChange} className={inputClass} placeholder="Ex: 1500" min="0" step="0.01" />
-              </Field>
-              <Field label="Date de début souhaitée">
-                <div className="relative">
-                  <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input type="date" name="dateDebut" value={formData.dateDebut} onChange={handleChange} className={`${inputClass} pl-11`} />
-                </div>
-              </Field>
+            <div className="mx-2 h-px flex-1 bg-slate-200 sm:mx-4"></div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs sm:h-8 sm:w-8 sm:text-sm font-black transition-colors ${currentStep >= 2 ? 'bg-[#082151] text-white' : 'bg-[#082151]/10 text-[#082151]'}`}>2</span>
+              <span className={`hidden text-sm font-black transition-colors sm:inline-block ${currentStep >= 2 ? 'text-[#082151]' : 'text-slate-400'}`}>Lieu</span>
             </div>
-            
-            <Field label="Détails complémentaires">
-              <input name="details" value={formData.details} onChange={handleChange} className={inputClass} placeholder="Surface, étage, accès..." />
-            </Field>
+            <div className="mx-2 h-px flex-1 bg-slate-200 sm:mx-4"></div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs sm:h-8 sm:w-8 sm:text-sm font-black transition-colors ${currentStep === 3 ? 'bg-[#082151] text-white' : 'bg-[#082151]/10 text-[#082151]'}`}>3</span>
+              <span className={`hidden text-sm font-black transition-colors sm:inline-block ${currentStep === 3 ? 'text-[#082151]' : 'text-slate-400'}`}>Contact</span>
+            </div>
+          </div>
 
-            <Field label="Photos du projet (optionnel, max 5)">
-              <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#2A4DEF]/25 bg-[#2A4DEF]/5 px-4 py-7 text-center transition hover:border-[#2A4DEF] hover:bg-[#2A4DEF]/10">
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg" multiple onChange={handlePhotos} className="hidden" />
-                <Camera className="h-8 w-8 text-[#2A4DEF]" />
-                <span className="mt-3 text-sm font-black text-[#082151]">Ajouter des images optionnelles</span>
-                <span className="mt-1 text-xs font-semibold text-slate-500">PNG ou JPG, 5 fichiers maximum</span>
-              </button>
-              {photos.length > 0 && (
-                <div className="mt-3 grid gap-2">
-                  {photos.map((photo, index) => (
-                    <div key={`${photo.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">
-                      <span className="min-w-0 truncate">{photo.name}</span>
-                      <button type="button" onClick={() => removePhoto(index)} className="ml-3 rounded-full p-2 text-[#c02525] hover:bg-[#c02525]/10" aria-label="Retirer la photo">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Field>
-          </FormSection>
-
-          <FormSection icon={MapPin} title="Lieu des travaux">
-            <Field label="Adresse *">
-              <div className="relative">
-                <Home className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input name="adresse" value={formData.adresse} onChange={handleChange} className={`${inputClass} pl-11`} placeholder="Rue, numéro" required />
-              </div>
-            </Field>
-
-            <div className={`grid gap-4 ${provinces.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
-              <Field label="Code postal *">
-                <input name="codePostal" value={formData.codePostal} onChange={handleChange} className={inputClass} placeholder="1000" required />
-              </Field>
-              <Field label="Région *">
-                <select name="region" value={formData.region} onChange={handleChange} className={inputClass} required>
-                  <option value="">Région</option>
-                  {REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
-                </select>
-              </Field>
-              {provinces.length > 0 && (
-                <Field label="Province *">
-                  <select name="province" value={formData.province} onChange={handleChange} className={inputClass} required>
-                    <option value="">Province</option>
-                    {provinces.map((province) => <option key={province} value={province}>{province}</option>)}
-                  </select>
+          {currentStep === 1 && (
+            <>
+              <FormSection icon={ClipboardList} title="Détails du projet">
+                <Field label="Type de travaux *">
+                  <input name="typeTravaux" value={formData.typeTravaux} onChange={handleChange} className={inputClass} placeholder="Ex: rénovation salle de bain" required />
                 </Field>
-              )}
-              <Field label="Ville/Commune *">
-                <select name="ville" value={formData.ville} onChange={handleChange} className={inputClass} required disabled={!formData.region || provinces.length > 0 && !formData.province}>
-                  <option value="">
-                    {!formData.region
-                      ? 'Choisissez d’abord une région'
-                      : provinces.length > 0 && !formData.province
-                        ? 'Choisissez d’abord une province'
-                        : 'Sélectionnez une ville/commune'}
-                  </option>
-                  {availableCommunes.map((commune) => <option key={commune.code} value={commune.name}>{commune.name}</option>)}
-                </select>
-              </Field>
-            </div>
-          </FormSection>
 
-          <FormSection icon={UserRound} title="Vos coordonnées">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Prénom *">
-                <input name="prenom" value={formData.prenom} onChange={handleChange} className={inputClass} placeholder="Prénom" required />
-              </Field>
-              <Field label="Nom *">
-                <input name="nom" value={formData.nom} onChange={handleChange} className={inputClass} placeholder="Nom" required />
-              </Field>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Email *">
-                <input type="email" name="email" value={formData.email} onChange={handleChange} className={inputClass} placeholder="votre@email.com" required />
-              </Field>
-              <Field label="Téléphone *">
-                <input name="telephone" value={formData.telephone} onChange={handleChange} className={inputClass} placeholder="+32 123 45 67 89" required />
-              </Field>
-            </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Secteur">
+                    <select name="categorie" value={formData.categorie} onChange={handleChange} className={inputClass}>
+                      <option value="">Sélectionnez un secteur</option>
+                      {sectors.map((sector) => <option key={sector} value={sector}>{sector}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Priorité">
+                    <select name="urgence" value={formData.urgence} onChange={handleChange} className={inputClass}>
+                      {URGENCES.map((urgence) => <option key={urgence.value} value={urgence.value}>{urgence.label}</option>)}
+                    </select>
+                  </Field>
+                </div>
 
-            <button type="submit" disabled={loading} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#c02525] px-6 py-4 text-base font-black text-white shadow-xl shadow-[#c02525]/20 transition hover:bg-[#a91f1f] disabled:cursor-not-allowed disabled:opacity-60">
-              {loading ? 'Envoi en cours...' : 'Envoyer ma demande de devis'}
-              {!loading && <Send className="h-5 w-5" />}
-            </button>
-            <p className="mt-4 text-center text-xs font-semibold leading-6 text-slate-400">
-              En soumettant ce formulaire, vous acceptez les{' '}
-              <a href="https://indebel.be/cgu-particuliers" target="_blank" rel="noreferrer" className="font-black text-[#2A4DEF] hover:text-[#c02525]">
-                conditions d'utilisation et politique de confidentialité
-              </a>
-              , et d'être contacté par des professionnels.
-            </p>
-          </FormSection>
+                <Field label="Description du projet *">
+                  <textarea name="description" value={formData.description} onChange={handleChange} rows={5} className={`${inputClass} resize-y`} placeholder="Décrivez vos besoins, vos contraintes et le résultat attendu." required />
+                </Field>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Budget estimé (en €)">
+                    <input type="number" name="budgetEstime" value={formData.budgetEstime} onChange={handleChange} className={inputClass} placeholder="Ex: 1500" min="0" step="0.01" />
+                  </Field>
+                  <Field label="Date de début souhaitée">
+                    <div className="relative">
+                      <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input type="date" name="dateDebut" value={formData.dateDebut} onChange={handleChange} className={`${inputClass} pl-11`} />
+                    </div>
+                  </Field>
+                </div>
+                
+                <Field label="Détails complémentaires">
+                  <input name="details" value={formData.details} onChange={handleChange} className={inputClass} placeholder="Surface, étage, accès..." />
+                </Field>
+
+                <Field label="Photos du projet (optionnel, max 5)">
+                  <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#2A4DEF]/25 bg-[#2A4DEF]/5 px-4 py-7 text-center transition hover:border-[#2A4DEF] hover:bg-[#2A4DEF]/10">
+                    <input ref={fileRef} type="file" accept="image/png,image/jpeg" multiple onChange={handlePhotos} className="hidden" />
+                    <Camera className="h-8 w-8 text-[#2A4DEF]" />
+                    <span className="mt-3 text-sm font-black text-[#082151]">Ajouter des images optionnelles</span>
+                    <span className="mt-1 text-xs font-semibold text-slate-500">PNG ou JPG, 5 fichiers maximum</span>
+                  </button>
+                  {photos.length > 0 && (
+                    <div className="mt-3 grid gap-2">
+                      {photos.map((photo, index) => (
+                        <div key={`${photo.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">
+                          <span className="min-w-0 truncate">{photo.name}</span>
+                          <button type="button" onClick={() => removePhoto(index)} className="ml-3 rounded-full p-2 text-[#c02525] hover:bg-[#c02525]/10" aria-label="Retirer la photo">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Field>
+              </FormSection>
+
+              <div className="flex justify-end p-5 pt-0 sm:p-7">
+                <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#082151] px-6 py-4 text-base font-black text-white shadow-xl shadow-[#082151]/20 transition hover:bg-[#2A4DEF] sm:w-auto">
+                  Suivant
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+            </>
+          )}
+
+          {currentStep === 2 && (
+            <>
+              <FormSection icon={MapPin} title="Lieu des travaux">
+                <Field label="Adresse *">
+                  <div className="relative">
+                    <Home className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input name="adresse" value={formData.adresse} onChange={handleChange} className={`${inputClass} pl-11`} placeholder="Rue, numéro" required />
+                  </div>
+                </Field>
+
+                <div className={`grid gap-4 ${provinces.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+                  <Field label="Code postal *">
+                    <input name="codePostal" value={formData.codePostal} onChange={handleChange} className={inputClass} placeholder="1000" required />
+                  </Field>
+                  <Field label="Région *">
+                    <select name="region" value={formData.region} onChange={handleChange} className={inputClass} required>
+                      <option value="">Région</option>
+                      {REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
+                    </select>
+                  </Field>
+                  {provinces.length > 0 && (
+                    <Field label="Province *">
+                      <select name="province" value={formData.province} onChange={handleChange} className={inputClass} required>
+                        <option value="">Province</option>
+                        {provinces.map((province) => <option key={province} value={province}>{province}</option>)}
+                      </select>
+                    </Field>
+                  )}
+                  <Field label="Ville/Commune *">
+                    <select name="ville" value={formData.ville} onChange={handleChange} className={inputClass} required disabled={!formData.region || provinces.length > 0 && !formData.province}>
+                      <option value="">
+                        {!formData.region
+                          ? 'Choisissez d’abord une région'
+                          : provinces.length > 0 && !formData.province
+                            ? 'Choisissez d’abord une province'
+                            : 'Sélectionnez une ville/commune'}
+                      </option>
+                      {availableCommunes.map((commune) => <option key={commune.code} value={commune.name}>{commune.name}</option>)}
+                    </select>
+                  </Field>
+                </div>
+              </FormSection>
+
+              <div className="flex flex-col gap-3 p-5 pt-0 sm:p-7 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => { setCurrentStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-4 text-base font-black text-[#082151] transition hover:bg-slate-50 sm:w-auto">
+                  Retour
+                </button>
+                <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#082151] px-6 py-4 text-base font-black text-white shadow-xl shadow-[#082151]/20 transition hover:bg-[#2A4DEF] sm:w-auto">
+                  Suivant
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+            </>
+          )}
+
+          {currentStep === 3 && (
+            <>
+              <FormSection icon={UserRound} title="Vos coordonnées">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Prénom *">
+                    <input name="prenom" value={formData.prenom} onChange={handleChange} className={inputClass} placeholder="Prénom" required />
+                  </Field>
+                  <Field label="Nom *">
+                    <input name="nom" value={formData.nom} onChange={handleChange} className={inputClass} placeholder="Nom" required />
+                  </Field>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Email *">
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} className={inputClass} placeholder="votre@email.com" required />
+                  </Field>
+                  <Field label="Téléphone *">
+                    <input name="telephone" value={formData.telephone} onChange={handleChange} className={inputClass} placeholder="+32 123 45 67 89" required />
+                  </Field>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <button type="button" onClick={() => { setCurrentStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-4 text-base font-black text-[#082151] transition hover:bg-slate-50 sm:w-auto">
+                    Retour
+                  </button>
+                  <button type="submit" disabled={loading} className="inline-flex w-full flex-1 items-center justify-center gap-2 rounded-full bg-[#c02525] px-6 py-4 text-base font-black text-white shadow-xl shadow-[#c02525]/20 transition hover:bg-[#a91f1f] disabled:cursor-not-allowed disabled:opacity-60">
+                    {loading ? 'Envoi en cours...' : 'Envoyer ma demande de devis'}
+                    {!loading && <Send className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="mt-4 text-center text-xs font-semibold leading-6 text-slate-400">
+                  En soumettant ce formulaire, vous acceptez les{' '}
+                  <a href="https://indebel.be/cgu-particuliers" target="_blank" rel="noreferrer" className="font-black text-[#2A4DEF] hover:text-[#c02525]">
+                    conditions d'utilisation et politique de confidentialité
+                  </a>
+                  , et d'être contacté par des professionnels.
+                </p>
+              </FormSection>
+            </>
+          )}
         </form>
       </section>
       </main>
       
+      <HowItWorksModal 
+        isOpen={showHowItWorksModal}
+        onClose={() => setShowHowItWorksModal(false)}
+      />
+
       <QuotaModal 
         isOpen={showQuotaModal}
         onClose={() => setShowQuotaModal(false)}

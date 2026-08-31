@@ -1,6 +1,18 @@
 <!doctype html>
 <html lang="fr">
   <head>
+    <!-- OpenPanel Tracking -->
+    <script src="https://monitoring.indebel.be/op1.js" defer async onerror="console.warn('OpenPanel script unavailable')"></script>
+    <script>
+      window.op = window.op || function (...args) { (window.op.q = window.op.q || []).push(args); };
+      op('init', {
+        clientId: 'e28e9774-6dc4-49cb-beb1-7f7a27ddd242',
+        trackScreenViews: true,
+        trackOutgoingLinks: true,
+        trackAttributes: true,
+        apiUrl: 'https://monitoring.indebel.be/api'
+      });
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />

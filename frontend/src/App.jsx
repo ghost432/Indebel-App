@@ -3,6 +3,23 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Toaster } from 'react-hot-toast'
 import { messageService } from './services/messageService';
 import { useAuth } from './context/AuthContext'
+import axios from 'axios'
+
+// Global Axios Interceptor for Insufficient Credits
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.data?.code === 'INSUFFICIENT_CREDITS' ||
+      error.response?.data?.code === 'DEMANDE_DEVIS_LIMIT_REACHED' ||
+      error.response?.data?.code === 'DEVIS_IA_LIMIT_REACHED'
+    ) {
+      const event = new CustomEvent('show-credit-popup', { detail: error.response.data.message });
+      window.dispatchEvent(event);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Pages
 const Messaging = lazy(() => import('./pages/Messaging'))
@@ -18,6 +35,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const EmployerDashboard = lazy(() => import('./pages/EmployerDashboard'))
 const FreelancerDashboard = lazy(() => import('./pages/FreelancerDashboard'))
 const FreelancerProfile = lazy(() => import('./pages/FreelancerProfile'))
+const FreelancerPortefeuille = lazy(() => import('./pages/FreelancerPortefeuille'))
 const FreelancerEvaluations = lazy(() => import('./pages/FreelancerEvaluations'))
 const EmployerProfile = lazy(() => import('./pages/EmployerProfile'))
 const FreelancerList = lazy(() => import('./pages/FreelancerList'))
@@ -32,6 +50,7 @@ const AdminJobs = lazy(() => import('./pages/AdminJobs'))
 const AdminStats = lazy(() => import('./pages/AdminStats'))
 const AdminSEO = lazy(() => import('./pages/AdminSEO'))
 const AdminSecteurs = lazy(() => import('./pages/AdminSecteurs'))
+const AdminMetierPages = lazy(() => import('./pages/AdminMetierPages'))
 const AdminCompetences = lazy(() => import('./pages/AdminCompetences'))
 const AdminPublishMission = lazy(() => import('./pages/AdminPublishMission'))
 const AdminLangues = lazy(() => import('./pages/AdminLangues'))
@@ -51,12 +70,15 @@ const AdminVerifications = lazy(() => import('./pages/AdminVerifications'))
 const AdminVerificationBCE = lazy(() => import('./pages/AdminVerificationBCE'))
 const AdminApplications = lazy(() => import('./pages/AdminApplications'))
 const AdminForfaits = lazy(() => import('./pages/AdminForfaits'))
+const AdminCredits = lazy(() => import('./pages/AdminCredits'))
 const AdminProfile = lazy(() => import('./pages/AdminProfile'))
 const FreelancerForfaits = lazy(() => import('./pages/FreelancerForfaits'))
 const FreelancerMissions = lazy(() => import('./pages/FreelancerMissions'))
 const FreelancerMesMissions = lazy(() => import('./pages/FreelancerMesMissions'))
 const FreelancerMyJobs = lazy(() => import('./pages/FreelancerMyJobs'))
 const EmployerForfaits = lazy(() => import('./pages/EmployerForfaits'))
+const FreelancerCredits = lazy(() => import('./pages/FreelancerCredits'))
+const EmployerCredits = lazy(() => import('./pages/EmployerCredits'))
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'))
 const PaymentCancel = lazy(() => import('./pages/PaymentCancel'))
 const FreelancerPublicProfile = lazy(() => import('./pages/FreelancerPublicProfile'))
@@ -87,6 +109,7 @@ import PrivateRoute from './components/PrivateRoute'
 import Navbar from './components/Navbar'
 import Preloader from './components/Preloader'
 import DashboardLayout from './layouts/DashboardLayout'
+import CreditPopupModal from './components/CreditPopupModal'
 
 function AppContent() {
   const { user } = useAuth()
@@ -130,6 +153,8 @@ function AppContent() {
           }}
         />
         
+        <CreditPopupModal />
+        
         <Suspense fallback={<div className="min-h-[45vh] bg-[#f5f8ff]" />}>
         <Routes>
           {/* Public Routes */}
@@ -145,6 +170,8 @@ function AppContent() {
           <Route path="/particulier" element={<Particulier />} />
           <Route path="/avis-particulier" element={<AvisParticulier />} />
           <Route path="/demande-devis" element={<DemandeDevis />} />
+          <Route path="/demande-devis/:categorieParam" element={<DemandeDevis />} />
+          <Route path="/demande-devis/*" element={<DemandeDevis />} />
           <Route path="/devis" element={<PublicDevis />} />
           <Route path="/devis/:id" element={<DevisDetail />} />
           <Route path="/missions" element={<PublicMissions />} />
@@ -201,6 +228,7 @@ function AppContent() {
             <Route path="stats" element={<AdminStats />} />
             <Route path="seo" element={<AdminSEO />} />
             <Route path="secteurs" element={<AdminSecteurs />} />
+            <Route path="contenus-metiers" element={<AdminMetierPages />} />
             <Route path="competences" element={<AdminCompetences />} />
             <Route path="publish-mission" element={<AdminPublishMission />} />
             <Route path="publish-mission/forfait-heure" element={<PublishMissionHourly />} />
@@ -212,6 +240,7 @@ function AppContent() {
             <Route path="verifications" element={<AdminVerifications />} />
             <Route path="verification-bce" element={<AdminVerificationBCE />} />
             <Route path="forfaits" element={<AdminForfaits />} />
+            <Route path="credits" element={<AdminCredits />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="send-notification" element={<AdminSendNotification />} />
           <Route path="newsletter" element={<AdminNewsletter />} />
@@ -241,7 +270,8 @@ function AppContent() {
             <Route path="list-freelancers" element={<FreelancerList />} />
             <Route path="list-freelancer/:username" element={<EmployerViewFreelancer />} />
             <Route path="list-employer" element={<EmployerList />} />
-            <Route path="forfaits" element={<EmployerForfaits />} />
+            <Route path="credits" element={<EmployerCredits />} />
+            <Route path="forfaits" element={<Navigate to="/employer/credits" replace />} />
             <Route path="factures" element={<MesFactures />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="support" element={<Support />} />
@@ -273,7 +303,9 @@ function AppContent() {
             <Route path="employers" element={<Navigate to="/freelancer/list-employers" replace />} />
             <Route path="verification" element={<VerificationIdentite />} />
             <Route path="verification/formulaire" element={<FormulaireVerificationMultiEtapes />} />
-            <Route path="forfaits" element={<FreelancerForfaits />} />
+            <Route path="credits" element={<FreelancerCredits />} />
+            <Route path="forfaits" element={<Navigate to="/freelancer/credits" replace />} />
+            <Route path="portefeuille" element={<FreelancerPortefeuille />} />
             <Route path="factures" element={<MesFactures />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="support" element={<Support />} />

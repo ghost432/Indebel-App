@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Clock, MapPin, Briefcase, Calendar, Users, Euro } from 'lucide-react'
+import { Clock, MapPin, Briefcase, Calendar, Users, Euro, Coins, AlertCircle } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
@@ -15,7 +15,7 @@ const LANGUES = ['Français', 'Néerlandais', 'Anglais', 'Allemand', 'Espagnol',
 
 const PublishMissionFixed = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [searchParams] = useSearchParams()
   const initialSecteur = searchParams.get('secteur') || ''
   const initialCompetences = searchParams.get('competences') ? searchParams.get('competences').split(',') : []
@@ -23,6 +23,8 @@ const PublishMissionFixed = () => {
   const isAdmin = user?.role === 'admin'
   const employerId = searchParams.get('employer_id')
   const [lieux, setLieux] = useState([])
+  const [creditCost, setCreditCost] = useState(1)
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false)
   const [formData, setFormData] = useState({
     titre: '', type_mission: 'jour', categorie: initialSecteur, langues_parlees: [], description: '',
     competences: initialCompetences, forfait_mission: '', temps_max_estime: '', type_facturation: 'jour',
@@ -32,10 +34,24 @@ const PublishMissionFixed = () => {
 
   useEffect(() => {
     fetchLieux()
+    fetchCreditCost()
   }, [])
 
+  const fetchCreditCost = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`${API_BASE_URL}/credits/price`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data && res.data.cout_missions_employer !== undefined) {
+        setCreditCost(parseInt(res.data.cout_missions_employer, 10))
+      }
+    } catch (err) {
+      console.error('Erreur chargement prix crédits:', err)
+    }
+  }
+
   const fetchLieux = () => {
-    // Lieux de mission statiques (peuvent être chargés depuis l'API plus tard)
     const lieuxStatiques = [
       { id: 1, value: 'site_entreprise', nom: 'Sur le site de l\'entreprise', comportement: 'conditionnel', actif: 1 },
       { id: 2, value: 'autre_site', nom: 'Sur un autre site', comportement: 'conditionnel', actif: 1 }
@@ -55,33 +71,43 @@ const PublishMissionFixed = () => {
     }))
   }
 
+  const userBalance = user?.solde_credits !== undefined ? user.solde_credits : 0
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (formData.langues_parlees.length === 0) return toast.error('Sélectionnez au moins une langue')
     if (formData.competences.length === 0) return toast.error('Sélectionnez au moins une compétence')
     if (!formData.autre_lieu) return toast.error('Veuillez préciser le lieu de la mission')
     
-    // Déterminer l'employer_id (admin publie pour un employer ou employer publie pour lui-même)
+    if (!isAdmin && userBalance < creditCost) {
+      setShowInsufficientModal(true)
+      return
+    }
+
     const finalEmployerId = isAdmin && employerId ? parseInt(employerId) : user?.id
     if (!finalEmployerId) return toast.error('Employer ID manquant')
     
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      // Utiliser autre_lieu (ville) comme adresse_mission
       await axios.post(`${API_BASE_URL}/missions/fixed`, {
         ...formData,
         employer_id: finalEmployerId,
-        adresse_mission: formData.autre_lieu, // Utiliser la ville comme adresse
+        adresse_mission: formData.autre_lieu,
         forfait_mission: parseFloat(formData.forfait_mission),
         temps_max_estime: parseInt(formData.temps_max_estime),
         nombre_independants: parseInt(formData.nombre_independants)
       }, { headers: { Authorization: `Bearer ${token}` }})
       
+      if (refreshUser) await refreshUser()
       toast.success('Mission publiée avec succès !')
       navigate(isAdmin ? '/admin/jobs' : '/employer/dashboard')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la publication')
+      if (error.response?.data?.code === 'INSUFFICIENT_CREDITS') {
+        setShowInsufficientModal(true)
+      } else {
+        toast.error(error.response?.data?.message || 'Erreur lors de la publication')
+      }
     } finally {
       setLoading(false)
     }
@@ -260,15 +286,67 @@ const PublishMissionFixed = () => {
                     <span className="font-medium">{formData.temps_max_estime} heures</span>
                   </div>
                 )}
+                {!isAdmin && (
+                  <div className="flex justify-between py-2.5 px-3 bg-amber-50 rounded-xl border border-amber-200/60 mt-2">
+                    <span className="text-amber-900 font-bold flex items-center gap-1.5 text-xs">
+                      <Coins className="h-4 w-4 text-amber-500" /> Coût publication :
+                    </span>
+                    <span className="font-black text-amber-900 text-xs">{creditCost} crédit(s)</span>
+                  </div>
+                )}
               </div>
               <div className="mt-6 space-y-3">
-                <Button type="submit" loading={loading} className="w-full">Publier la mission</Button>
+                <Button type="submit" loading={loading} className="w-full bg-[#df6422] hover:bg-[#c5551c]">Publier la mission</Button>
                 <Button type="button" variant="outline" className="w-full" onClick={() => navigate('/employer/publish-mission')}>Annuler</Button>
               </div>
             </Card>
           </div>
         </div>
       </form>
+
+      {/* Modal solde insuffisant */}
+      {showInsufficientModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 md:p-8 shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 mb-4 ring-8 ring-amber-50/50">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            
+            <h3 className="text-xl font-black text-[#082151]">Solde de crédits insuffisant</h3>
+            
+            <p className="mt-3 text-sm font-medium text-slate-600 leading-relaxed">
+              Pour publier cette mission, votre compte doit disposer d'au moins <span className="font-bold text-[#082151]">{creditCost} crédit(s)</span>.
+            </p>
+
+            <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-left space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-medium">Votre solde actuel :</span>
+                <span className="font-black text-rose-600">{userBalance} crédit(s)</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 font-medium">Coût de la publication :</span>
+                <span className="font-black text-[#082151]">{creditCost} crédit(s)</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowInsufficientModal(false)}
+                className="w-full rounded-xl font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={() => navigate('/employer/credits')}
+                className="w-full rounded-xl font-bold bg-[#df6422] hover:bg-[#c5551c] text-white shadow-md"
+              >
+                Recharger mes crédits
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

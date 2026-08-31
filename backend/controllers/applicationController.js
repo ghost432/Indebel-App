@@ -68,33 +68,55 @@ exports.createApplication = async (req, res, next) => {
       });
     }
 
-    // Check employer limits
-    const { getEffectiveForfait } = require('../services/devisViewLimitService');
-    const forfait = await getEffectiveForfait(missionData.employer_id);
-    const limit = forfait?.max_candidatures_recues;
-    
-    if (limit !== null && limit !== undefined) {
-      const [countResult] = await db.query(
-        'SELECT COUNT(*) as nb FROM applications WHERE job_id = ?',
-        [job_id]
-      );
-      if (countResult[0].nb >= limit) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cette mission a déjà reçu le nombre maximum de candidatures autorisé.'
-        });
+    // Check employer limits safely
+    try {
+      const { getEffectiveForfait } = require('../services/devisViewLimitService');
+      const forfait = await getEffectiveForfait(missionData.employer_id);
+      const limit = forfait?.max_candidatures_recues;
+      
+      if (limit !== null && limit !== undefined) {
+        const [countResult] = await db.query(
+          'SELECT COUNT(*) as nb FROM applications WHERE job_id = ?',
+          [job_id]
+        );
+        if (countResult[0].nb >= limit) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cette mission a déjà reçu le nombre maximum de candidatures autorisé.'
+          });
+        }
       }
+    } catch (limitErr) {
+      console.warn('⚠️ Limit check skipped:', limitErr.message);
     }
 
-    // Create application
+    // Create application in applications table
     const [result] = await db.query(
       'INSERT INTO applications (job_id, freelancer_id, statut, message) VALUES (?, ?, ?, ?)',
       [job_id, freelancer_id, 'en_attente', noteContent]
     );
 
+    // Also sync to demandes_missions table so Admin & Recruiter dashboards display it
+    try {
+      if (missionData.employer_id) {
+        const [existingDm] = await db.query(
+          'SELECT id FROM demandes_missions WHERE mission_id = ? AND freelancer_id = ?',
+          [job_id, freelancer_id]
+        );
+        if (existingDm.length === 0) {
+          await db.query(
+            'INSERT INTO demandes_missions (mission_id, mission_type, freelancer_id, employer_id, statut, message_freelancer) VALUES (?, ?, ?, ?, ?, ?)',
+            [job_id, missionType || 'hourly', freelancer_id, missionData.employer_id, 'en_attente', noteContent]
+          );
+        }
+      }
+    } catch (syncErr) {
+      console.error('Erreur sync demandes_missions:', syncErr);
+    }
+
     // Get employer and freelancer data
     const [employer] = await db.query(
-      'SELECT email, denomination FROM users WHERE id = ?',
+      'SELECT email, denomination, prenom, nom FROM users WHERE id = ?',
       [missionData.employer_id]
     );
 
@@ -106,30 +128,34 @@ exports.createApplication = async (req, res, next) => {
     // Send notifications and emails
     if (employer.length > 0 && freelancer.length > 0) {
       const freelancerNom = `${freelancer[0].prenom || ''} ${freelancer[0].nom || ''}`.trim();
-      await notificationService.notifyApplicationSent(
-        freelancer_id,
-        missionData.employer_id,
-        missionData.titre,
-        freelancerNom,
-        employer[0].email,
-        employer[0].denomination
-      );
+      try {
+        await notificationService.notifyApplicationSent(
+          freelancer_id,
+          missionData.employer_id,
+          missionData.titre,
+          freelancerNom,
+          employer[0].email,
+          employer[0].denomination
+        );
+      } catch (e) {}
       
       // Notification supplémentaire pour le freelancer
-      const additionalNotif = require('../services/additionalNotifications');
-      const [freelancerEmail] = await db.query(
-        'SELECT email FROM users WHERE id = ?',
-        [freelancer_id]
-      );
-      
-      if (freelancerEmail.length > 0) {
-        await additionalNotif.sendApplicationSentNotification(
-          freelancer_id,
-          freelancerEmail[0].email,
-          freelancerNom,
-          missionData.titre
+      try {
+        const additionalNotif = require('../services/additionalNotifications');
+        const [freelancerEmail] = await db.query(
+          'SELECT email FROM users WHERE id = ?',
+          [freelancer_id]
         );
-      }
+        
+        if (freelancerEmail.length > 0) {
+          await additionalNotif.sendApplicationSentNotification(
+            freelancer_id,
+            freelancerEmail[0].email,
+            freelancerNom,
+            missionData.titre
+          );
+        }
+      } catch (e) {}
     }
 
     res.status(201).json({
@@ -228,22 +254,43 @@ exports.getFreelancerApplications = async (req, res, next) => {
   try {
     const freelancer_id = req.user.id;
 
-    // Récupérer toutes les candidatures du freelancer
+    // Récupérer toutes les candidatures du freelancer depuis les deux tables
     const [applications] = await db.query(
       `SELECT a.* FROM applications a WHERE a.freelancer_id = ? ORDER BY a.date_creation DESC`,
       [freelancer_id]
     );
 
+    // Récupérer également les candidatures dans demandes_missions s'il y en a qui manquent
+    const [demandes] = await db.query(
+      `SELECT dm.id as dm_id, dm.mission_id as job_id, dm.freelancer_id, dm.statut, dm.message_freelancer as message, dm.date_demande as date_creation, dm.mission_type
+       FROM demandes_missions dm
+       WHERE dm.freelancer_id = ? ORDER BY dm.date_demande DESC`,
+      [freelancer_id]
+    );
+
+    // Combiner les candidatures sans doublon de job_id
+    const appMap = new Map();
+    for (const app of applications) {
+      appMap.set(String(app.job_id), app);
+    }
+    for (const dm of demandes) {
+      if (!appMap.has(String(dm.job_id))) {
+        appMap.set(String(dm.job_id), dm);
+      }
+    }
+
+    const allApps = Array.from(appMap.values());
+
     // Enrichir chaque candidature avec les données de la mission et de l'employer
     const enrichedApplications = [];
     
-    for (const app of applications) {
+    for (const app of allApps) {
       let missionData = null;
       let employerData = null;
 
       // Chercher dans missions_forfait_horaire
       const [hourly] = await db.query(
-        `SELECT m.titre, m.description, m.employer_id 
+        `SELECT m.id, m.titre, m.description, m.employer_id, 'hourly' as mission_type
          FROM missions_forfait_horaire m 
          WHERE m.id = ?`,
         [app.job_id]
@@ -254,7 +301,7 @@ exports.getFreelancerApplications = async (req, res, next) => {
       } else {
         // Chercher dans missions_forfait_fixe
         const [fixed] = await db.query(
-          `SELECT m.titre, m.description, m.employer_id 
+          `SELECT m.id, m.titre, m.description, m.employer_id, 'fixed' as mission_type
            FROM missions_forfait_fixe m 
            WHERE m.id = ?`,
           [app.job_id]
@@ -265,7 +312,7 @@ exports.getFreelancerApplications = async (req, res, next) => {
         } else {
           // Chercher dans jobs (rétrocompatibilité)
           const [job] = await db.query(
-            `SELECT j.titre, j.description, j.employer_id 
+            `SELECT j.id, j.titre, j.description, j.employer_id, 'job' as mission_type
              FROM jobs j 
              WHERE j.id = ?`,
             [app.job_id]
@@ -280,7 +327,7 @@ exports.getFreelancerApplications = async (req, res, next) => {
       // Récupérer les données de l'employer
       if (missionData && missionData.employer_id) {
         const [employer] = await db.query(
-          `SELECT nom, denomination FROM users WHERE id = ?`,
+          `SELECT nom, prenom, denomination FROM users WHERE id = ?`,
           [missionData.employer_id]
         );
 
@@ -289,13 +336,26 @@ exports.getFreelancerApplications = async (req, res, next) => {
         }
       }
 
+      const clientName = employerData
+        ? (employerData.prenom || employerData.nom ? `${employerData.prenom || ''} ${employerData.nom || ''}`.trim() : employerData.denomination)
+        : '';
+
       // Enrichir la candidature
       enrichedApplications.push({
         ...app,
-        job_titre: missionData?.titre || 'Mission non trouvée',
+        job_titre: missionData?.titre || 'Mission postulée',
         job_description: missionData?.description || '',
+        mission_type: app.mission_type || missionData?.mission_type || 'hourly',
         employer_nom: employerData?.nom || '',
-        employer_denomination: employerData?.denomination || ''
+        employer_prenom: employerData?.prenom || '',
+        employer_denomination: employerData?.denomination || '',
+        prenom: employerData?.prenom || '',
+        nom: employerData?.nom || '',
+        denomination: employerData?.denomination || '',
+        client_nom: employerData?.nom || '',
+        client_prenom: employerData?.prenom || '',
+        client_denomination: employerData?.denomination || '',
+        client_name: clientName || 'Client Indebel'
       });
     }
 

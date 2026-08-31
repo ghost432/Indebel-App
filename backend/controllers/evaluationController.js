@@ -117,18 +117,23 @@ exports.createEvaluation = async (req, res, next) => {
       recommandation
     } = req.body;
 
-    // Vérifier que l'employeur n'a pas déjà évalué ce freelancer pour cette mission
-    const [existing] = await db.query(
-      `SELECT id FROM evaluations 
-       WHERE mission_id = ? AND mission_type = ? AND employer_id = ? AND freelancer_id = ?`,
-      [mission_id, mission_type, employer_id, freelancer_id]
-    );
+    const mId = mission_id ? parseInt(mission_id) : null;
+    const mType = mission_type || null;
 
-    if (existing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vous avez déjà évalué ce freelancer pour cette mission'
-      });
+    // Vérifier si une évaluation existe déjà pour cette mission
+    if (mId) {
+      const [existing] = await db.query(
+        `SELECT id FROM evaluations 
+         WHERE mission_id = ? AND employer_id = ? AND freelancer_id = ?`,
+        [mId, employer_id, freelancer_id]
+      );
+
+      if (existing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vous avez déjà évalué ce freelancer pour cette mission'
+        });
+      }
     }
 
     // Créer l'évaluation
@@ -137,8 +142,8 @@ exports.createEvaluation = async (req, res, next) => {
        (mission_id, mission_type, employer_id, freelancer_id, note, commentaire, 
         qualite_travail, respect_delais, communication, recommandation)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [mission_id, mission_type, employer_id, freelancer_id, note, commentaire,
-       qualite_travail, respect_delais, communication, recommandation]
+      [mId, mType, employer_id, freelancer_id, note, commentaire || '',
+       qualite_travail || note, respect_delais || note, communication || note, recommandation !== undefined ? recommandation : true]
     );
 
     // Récupérer les infos du freelancer et de l'employeur
@@ -158,80 +163,69 @@ exports.createEvaluation = async (req, res, next) => {
       const employerName = employer[0].denomination || 
                           `${employer[0].prenom} ${employer[0].nom}`;
 
-      // Envoyer l'email
-      try {
-        await sendEmail({
-          to: freelancer[0].email,
-          subject: 'Vous avez reçu une nouvelle évaluation',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2A4DEF;">⭐ Nouvelle évaluation reçue</h2>
-              <p>Bonjour ${freelancerName},</p>
-              <p><strong>${employerName}</strong> a évalué votre travail avec une note de <strong>${note}/5 étoiles</strong>.</p>
-              
-              <div style="background: linear-gradient(135deg, #2A4DEF 0%, #4962D5 100%); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
-                <div style="font-size: 48px; color: #FFD700; margin-bottom: 10px;">
-                  ${'⭐'.repeat(Math.round(note))}
-                </div>
-                <p style="color: white; font-size: 24px; font-weight: bold; margin: 0;">${note}/5</p>
+      // Envoyer l'email et les notifications en arrière-plan sans bloquer la réponse HTTP
+      sendEmail({
+        to: freelancer[0].email,
+        subject: 'Vous avez reçu une nouvelle évaluation',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2A4DEF;">⭐ Nouvelle évaluation reçue</h2>
+            <p>Bonjour ${freelancerName},</p>
+            <p><strong>${employerName}</strong> a évalué votre travail avec une note de <strong>${note}/5 étoiles</strong>.</p>
+            
+            <div style="background: linear-gradient(135deg, #2A4DEF 0%, #4962D5 100%); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
+              <div style="font-size: 48px; color: #FFD700; margin-bottom: 10px;">
+                ${'⭐'.repeat(Math.round(note))}
               </div>
-              
-              ${commentaire ? `
-                <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2A4DEF;">
-                  <p style="font-weight: bold; color: #2A4DEF; margin-bottom: 5px;">Commentaire :</p>
-                  <p style="margin: 0; color: #4B5563; font-style: italic;">"${commentaire}"</p>
-                </div>
-              ` : ''}
-              
-              <div style="background: #eef3ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0; color: #2A4DEF; font-size: 14px;">
-                  📊 <strong>Détails :</strong><br>
-                  Qualité du travail : ${qualite_travail}/5<br>
-                  Respect des délais : ${respect_delais}/5<br>
-                  Communication : ${communication}/5<br>
-                  ${recommandation ? '✅ Vous recommande à d’autres clients' : ''}
-                </p>
+              <p style="color: white; font-size: 24px; font-weight: bold; margin: 0;">${note}/5</p>
+            </div>
+            
+            ${commentaire ? `
+              <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2A4DEF;">
+                <p style="font-weight: bold; color: #2A4DEF; margin-bottom: 5px;">Commentaire :</p>
+                <p style="margin: 0; color: #4B5563; font-style: italic;">"${commentaire}"</p>
               </div>
-              
-              <p style="margin-top: 20px;">
-                <a href="${process.env.FRONTEND_URL}/freelancer/evaluations" 
-                   style="background: #2A4DEF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                  Voir toutes mes évaluations
-                </a>
-              </p>
-              
-              <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
-                Les évaluations positives améliorent votre visibilité sur la plateforme !<br><br>
-                L'équipe Indebel
+            ` : ''}
+            
+            <div style="background: #eef3ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #2A4DEF; font-size: 14px;">
+                📊 <strong>Détails :</strong><br>
+                Qualité du travail : ${qualite_travail}/5<br>
+                Respect des délais : ${respect_delais}/5<br>
+                Communication : ${communication}/5<br>
+                ${recommandation ? '✅ Vous recommande à d’autres clients' : ''}
               </p>
             </div>
-          `
-        });
-        console.log(`✅ Email d'évaluation envoyé à ${freelancerName}`);
-      } catch (emailError) {
-        console.error('❌ Erreur envoi email évaluation:', emailError.message);
-      }
+            
+            <p style="margin-top: 20px;">
+              <a href="${process.env.FRONTEND_URL}/freelancer/evaluations" 
+                 style="background: #2A4DEF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Voir toutes mes évaluations
+              </a>
+            </p>
+            
+            <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
+              Les évaluations positives améliorent votre visibilité sur la plateforme !<br><br>
+              L'équipe Indebel
+            </p>
+          </div>
+        `
+      }).catch(err => console.error('❌ Erreur email evaluation:', err.message));
 
-      // Créer une notification
-      try {
-        await notificationService.createNotification(
-          freelancer_id,
-          'evaluation',
-          `⭐ Nouvelle évaluation : ${note}/5`,
-          `${employerName} vous a évalué avec ${note}/5 étoiles. ${commentaire ? 'Commentaire laissé.' : ''}`,
-          {
-            evaluation_id: result.insertId,
-            note: note,
-            employer_name: employerName,
-            lien: '/freelancer/evaluations'
-          }
-        );
-        console.log(`✅ Notification d'évaluation créée pour ${freelancerName}`);
-      } catch (notifError) {
-        console.error('❌ Erreur création notification:', notifError.message);
-      }
+      notificationService.createNotification(
+        freelancer_id,
+        'evaluation',
+        `⭐ Nouvelle évaluation : ${note}/5`,
+        `${employerName} vous a évalué avec ${note}/5 étoiles. ${commentaire ? 'Commentaire laissé.' : ''}`,
+        {
+          evaluation_id: result.insertId,
+          note: note,
+          employer_name: employerName,
+          lien: '/freelancer/evaluations'
+        }
+      ).catch(err => console.error('❌ Erreur notif evaluation:', err.message));
 
-      await sendEvaluationFollowUps({
+      sendEvaluationFollowUps({
         evaluationId: result.insertId,
         note,
         commentaire,
@@ -240,7 +234,7 @@ exports.createEvaluation = async (req, res, next) => {
         employerId: employer_id,
         employerEmail: employer[0].email,
         employerName
-      });
+      }).catch(err => console.error('❌ Erreur followups evaluation:', err.message));
     }
 
     res.status(201).json({

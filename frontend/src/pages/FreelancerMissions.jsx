@@ -9,6 +9,9 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import VerificationPopup from '../components/VerificationPopup';
+import CreditUnlockGuard from '../components/CreditUnlockGuard';
+import api from '../services/api';
+import DevisUnlockModal from '../components/devis/DevisUnlockModal';
 import { Briefcase, MapPin, Calendar, Euro, Eye, Send, ArrowLeft, Clock, Building2, Users, Languages, CheckCircle, XCircle, Search, Filter, FileText, CheckSquare, CreditCard, Code, Sparkles, AlertTriangle, Bot } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -50,6 +53,13 @@ const FreelancerMissions = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
+  // Credit gating states
+  const [missionToUnlock, setMissionToUnlock] = useState(null);
+  const [unlockingMission, setUnlockingMission] = useState(false);
+  const [creditCost, setCreditCost] = useState(1);
+  const [aiCreditCost, setAiCreditCost] = useState(1);
+  const [creditBalance, setCreditBalance] = useState(user?.solde_credits || 0);
+
   useEffect(() => {
     document.title = 'Missions disponibles - Indebel';
     // Charger les missions ignorées depuis localStorage
@@ -57,7 +67,30 @@ const FreelancerMissions = () => {
     setIgnoredMissions(ignored);
     fetchMissions();
     fetchAppliedMissions();
-  }, []);
+    if (user) fetchCreditInfo();
+  }, [user]);
+
+  const fetchCreditInfo = async () => {
+    try {
+      const [settingsRes, balanceRes] = await Promise.all([
+        api.get('/credits/settings/price').catch(() => api.get('/admin-credits/settings/price')).catch(() => ({ data: {} })),
+        api.get('/credits/balance').catch(() => ({ data: {} }))
+      ]);
+      if (settingsRes.data?.cout_vues_missions !== undefined) {
+        setCreditCost(parseInt(settingsRes.data.cout_vues_missions, 10));
+      }
+      if (settingsRes.data?.cout_candidatures_ia !== undefined) {
+        setAiCreditCost(parseInt(settingsRes.data.cout_candidatures_ia, 10));
+      }
+      if (balanceRes.data?.solde !== undefined) {
+        setCreditBalance(parseInt(balanceRes.data.solde, 10));
+      } else if (user?.solde_credits !== undefined) {
+        setCreditBalance(user.solde_credits);
+      }
+    } catch (err) {
+      console.error('Erreur chargement crédits:', err);
+    }
+  };
 
   useEffect(() => {
     filterAndSortMissions();
@@ -196,10 +229,43 @@ const FreelancerMissions = () => {
       return;
     }
 
+    const storageKey = `unlocked_mission_detail_${user?.id}_${mission.id}`;
+    if (localStorage.getItem(storageKey) === 'true') {
+      proceedToViewMission(mission);
+      return;
+    }
+
+    setMissionToUnlock(mission);
+  };
+
+  const handleConfirmUnlockMission = async (mission) => {
     try {
-      // Vérifier et logger la vue
-      const response = await missionService.logView(mission.id, mission.mission_type, 'detail');
-      
+      setUnlockingMission(true);
+      const res = await api.post('/credits/consume', { action: 'view_mission_detail', amount: creditCost });
+      if (res.data?.success) {
+        const storageKey = `unlocked_mission_detail_${user?.id}_${mission.id}`;
+        localStorage.setItem(storageKey, 'true');
+        if (res.data.newBalance !== undefined) {
+          setCreditBalance(res.data.newBalance);
+        }
+        toast.success(`Mission débloquée ! ${res.data.deducted || creditCost} crédit(s) déduit(s).`);
+        setMissionToUnlock(null);
+        proceedToViewMission(mission);
+      }
+    } catch (error) {
+      if (error.response?.data?.code === 'INSUFFICIENT_CREDITS' || error.response?.status === 403) {
+        // Géré par la modale
+      } else {
+        toast.error(error.response?.data?.message || 'Erreur lors du déblocage');
+      }
+    } finally {
+      setUnlockingMission(false);
+    }
+  };
+
+  const proceedToViewMission = async (mission) => {
+    try {
+      await missionService.logView(mission.id, mission.mission_type, 'detail');
       const missionSlug = mission.titre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       setSelectedMission(mission);
       navigate(`/freelancer/list-missions?mission=${missionSlug}`);
@@ -214,8 +280,9 @@ const FreelancerMissions = () => {
         });
         setShowQuotaModal(true);
       } else {
-        toast.error('Erreur lors de l\'accès à la mission');
-        console.error(error);
+        const missionSlug = mission.titre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        setSelectedMission(mission);
+        navigate(`/freelancer/list-missions?mission=${missionSlug}`);
       }
     }
   };
@@ -366,26 +433,50 @@ const FreelancerMissions = () => {
                     <div className="mt-1 bg-white p-1.5 rounded-lg shadow-sm border border-indigo-100">
                       <Sparkles className="h-5 w-5 text-indigo-500" />
                     </div>
-                    <div>
+                    <div className="w-full">
                       <h4 className="font-bold text-indigo-900 mb-1">Assistant IA Indebel</h4>
-                      <p className="text-sm text-indigo-700 leading-relaxed mb-4">
+                      <p className="text-sm text-indigo-700 leading-relaxed mb-3">
                         Notre IA rédigera un message de motivation professionnel basé sur votre profil et les détails de la mission.
                       </p>
+
+                      <div className="mb-4 flex items-center justify-between gap-4 rounded-xl bg-white/80 p-2.5 text-xs font-semibold text-indigo-950 border border-indigo-200 shadow-sm">
+                        <span>✨ Tarif Candidature IA : <strong>{aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}</strong></span>
+                        <span>Solde actuel : <strong className={creditBalance < aiCreditCost ? "text-red-600 font-bold" : "text-emerald-700 font-bold"}>{creditBalance} crédit{creditBalance > 1 ? 's' : ''}</strong></span>
+                      </div>
+
                       <textarea
                         value={applyMessage}
                         onChange={(e) => setApplyMessage(e.target.value)}
                         placeholder="Instructions optionnelles (ex: Mettre en avant mes 5 ans d'expérience...)"
                         className="w-full rounded-xl border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 text-sm mb-4"
-                        rows="5"
+                        rows="4"
                       />
-                      <Button 
-                        onClick={handleGenerateAi}
-                        loading={isGeneratingAi}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm flex items-center justify-center"
-                      >
-                        <Bot className="h-4 w-4 mr-2" />
-                        {isGeneratingAi ? 'Génération en cours...' : "Cliquer ici pour générer le message avec l'IA"}
-                      </Button>
+
+                      {creditBalance < aiCreditCost ? (
+                        <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-bold space-y-2">
+                          <p className="flex items-center gap-1.5">
+                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                            Crédits insuffisants pour la génération IA ({creditBalance} / {aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}).
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => navigate(user?.role === 'employer' ? '/employer/credits' : '/freelancer/credits')}
+                            className="inline-flex items-center justify-center rounded-lg bg-[#c02525] px-3 py-2 text-xs font-black text-white hover:bg-[#a91f1f] w-full shadow-sm"
+                          >
+                            Recharger mes crédits
+                          </button>
+                        </div>
+                      ) : (
+                        <Button 
+                          onClick={handleGenerateAi}
+                          loading={isGeneratingAi}
+                          disabled={creditBalance < aiCreditCost}
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm flex items-center justify-center font-bold"
+                        >
+                          <Bot className="h-4 w-4 mr-2" />
+                          {isGeneratingAi ? 'Génération en cours...' : `Générer avec l'IA (${aiCreditCost} crédit${aiCreditCost > 1 ? 's' : ''})`}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -442,6 +533,18 @@ const FreelancerMissions = () => {
               </div>
             </div>
           </Modal>
+
+          <DevisUnlockModal
+            isOpen={!!missionToUnlock}
+            onClose={() => setMissionToUnlock(null)}
+            demande={missionToUnlock}
+            itemType="mission"
+            creditCost={creditCost}
+            creditBalance={creditBalance}
+            onConfirmUnlock={handleConfirmUnlockMission}
+            unlocking={unlockingMission}
+            user={user}
+          />
     </>
   );
 
@@ -830,20 +933,20 @@ if (loading) {
 
   // Affichage de la liste des missions
   return (
-    <div>
-      <div className="bg-[#082151] rounded-[24px] shadow-md p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden text-white border-0">
-        <div className="relative z-10">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">Missions disponibles</h1>
-          <p className="text-slate-200 mt-1 text-sm md:text-base">Découvrez et postulez aux missions qui vous correspondent</p>
+    <CreditUnlockGuard action="view_missions_list" storageKey="unlocked_missions_list" title="la liste des missions">
+      <div>
+        <div className="bg-[#082151] rounded-[24px] shadow-md p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden text-white border-0">
+          <div className="relative z-10">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Missions disponibles</h1>
+            <p className="text-slate-200 mt-1 text-sm md:text-base">Découvrez et postulez aux missions qui vous correspondent</p>
+          </div>
+          <div className="absolute right-0 top-0 w-64 h-64 bg-gradient-to-br from-[#2b4eef]/20 to-[#df6422]/20 rounded-full blur-3xl -mr-16 -mt-16 z-0 pointer-events-none"></div>
         </div>
-        <div className="absolute right-0 top-0 w-64 h-64 bg-gradient-to-br from-[#2b4eef]/20 to-[#df6422]/20 rounded-full blur-3xl -mr-16 -mt-16 z-0 pointer-events-none"></div>
-      </div>
 
-      {/* Filtres et recherche */}
-      <div className="mb-6 rounded-3xl bg-slate-50 border border-slate-200 p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Recherche par mot-clé */}
-          <div className="relative">
+        {/* Filtres et recherche */}
+        <div className="mb-6 rounded-3xl bg-slate-50 border border-slate-200 p-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
               type="text"
@@ -1059,6 +1162,7 @@ if (loading) {
       {modals}
       <QuotaWidget />
     </div>
+    </CreditUnlockGuard>
   );
 };
 

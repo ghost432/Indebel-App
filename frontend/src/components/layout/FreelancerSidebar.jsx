@@ -38,9 +38,17 @@ const FreelancerSidebar = () => {
                 <p className="text-sm font-medium text-gray-900">
                   {user?.prenom} {user?.nom}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {user?.role === 'freelancer' ? 'Prestataire' : 'Recruteur'}
-                </p>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <p className="text-xs text-gray-500 font-medium">
+                    {user?.role === 'freelancer' ? 'Prestataire' : 'Recruteur'}
+                  </p>
+                  <Link
+                    to={user?.role === 'freelancer' ? '/freelancer/credits' : '/employer/credits'}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 transition-colors border border-amber-300/60"
+                  >
+                    <span>{user?.solde_credits || 0} cr.</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

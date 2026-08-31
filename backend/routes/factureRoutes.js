@@ -14,5 +14,6 @@ router.post('/admin/generer-retroactives', authenticate, authorize('admin'), fac
 router.post('/admin/credit-note/:id', authenticate, authorize('admin'), factureController.creerCreditNote);
 router.get('/admin/credit-note/:id/telecharger', authenticate, authorize('admin'), factureController.telechargerCreditNote);
 router.post('/admin/credit-note/:id/email', authenticate, authorize('admin'), factureController.envoyerCreditNoteMail);
+router.post('/admin/retry-falco/:id', authenticate, authorize('admin'), factureController.retryFalco);
 
 module.exports = router;

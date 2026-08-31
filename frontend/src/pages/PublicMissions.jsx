@@ -24,8 +24,10 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { missionService } from '../services/missionService'
 import { demandeService } from '../services/demandeService'
+import api from '../services/api'
 import Button from '../components/Button'
 import VerificationPopup from '../components/VerificationPopup'
+import DevisUnlockModal from '../components/devis/DevisUnlockModal'
 
 const itemsPerPage = 9
 
@@ -53,7 +55,11 @@ const PublicMissionList = () => {
   const [quotaModal, setQuotaModal] = useState({ open: false, title: 'Limite atteinte', message: '', forfait: null, limit: null, current: null })
   const [openingMissionKey, setOpeningMissionKey] = useState(null)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
-  const { user } = useAuth()
+  const [missionToUnlock, setMissionToUnlock] = useState(null)
+  const [unlockingMission, setUnlockingMission] = useState(false)
+  const [creditCost, setCreditCost] = useState(1)
+  const [creditBalance, setCreditBalance] = useState(user?.solde_credits || 0)
+  const { user, refreshUser } = useAuth()
 
   useEffect(() => {
     document.title = 'Missions publiques - Indebel'
@@ -63,7 +69,27 @@ const PublicMissionList = () => {
   useEffect(() => {
     if (user?.role === 'freelancer') loadAppliedMissions()
     else setAppliedMissions([])
+    if (user) fetchCreditInfo()
   }, [user])
+
+  const fetchCreditInfo = async () => {
+    try {
+      const [settingsRes, balanceRes] = await Promise.all([
+        api.get('/credits/settings/price').catch(() => api.get('/admin-credits/settings/price')).catch(() => ({ data: {} })),
+        api.get('/credits/balance').catch(() => ({ data: {} }))
+      ])
+      if (settingsRes.data?.cout_vues_missions !== undefined) {
+        setCreditCost(parseInt(settingsRes.data.cout_vues_missions, 10))
+      }
+      if (balanceRes.data?.solde !== undefined) {
+        setCreditBalance(parseInt(balanceRes.data.solde, 10))
+      } else if (user?.solde_credits !== undefined) {
+        setCreditBalance(user.solde_credits)
+      }
+    } catch (err) {
+      console.error('Erreur chargement crédits:', err)
+    }
+  }
 
   const loadMissions = async () => {
     try {
@@ -134,6 +160,42 @@ const PublicMissionList = () => {
       return
     }
 
+    const storageKey = `unlocked_mission_detail_${user.id}_${mission.id}`
+    if (sessionStorage.getItem(storageKey) === 'true') {
+      navigateToMission(mission, path)
+      return
+    }
+
+    setMissionToUnlock({ ...mission, path })
+  }
+
+  const handleConfirmUnlockMission = async (mission) => {
+    try {
+      setUnlockingMission(true)
+      const res = await api.post('/credits/consume', { action: 'view_mission_detail', amount: creditCost })
+      if (res.data?.success) {
+        const storageKey = `unlocked_mission_detail_${user?.id}_${mission.id}`
+        sessionStorage.setItem(storageKey, 'true')
+        if (res.data.newBalance !== undefined) {
+          setCreditBalance(res.data.newBalance)
+        }
+        if (refreshUser) refreshUser()
+        toast.success(`Mission débloquée ! ${res.data.deducted || creditCost} crédit(s) déduit(s).`)
+        setMissionToUnlock(null)
+        navigateToMission(mission, mission.path)
+      }
+    } catch (error) {
+      if (error.response?.data?.code === 'INSUFFICIENT_CREDITS' || error.response?.status === 403) {
+        // Géré dans la modale
+      } else {
+        toast.error(error.response?.data?.message || 'Erreur lors du déblocage')
+      }
+    } finally {
+      setUnlockingMission(false)
+    }
+  }
+
+  const navigateToMission = async (mission, path) => {
     try {
       const missionKey = `${mission.mission_type}-${mission.id}`
       setOpeningMissionKey(missionKey)
@@ -153,7 +215,7 @@ const PublicMissionList = () => {
         })
         return
       }
-      toast.error(error.response?.data?.message || 'Impossible d’ouvrir cette mission')
+      navigate(path)
     } finally {
       setOpeningMissionKey(null)
     }
@@ -264,6 +326,17 @@ const PublicMissionList = () => {
       </section>
 
       <QuotaReachedModal data={quotaModal} onClose={() => setQuotaModal({ ...quotaModal, open: false })} />
+      <DevisUnlockModal
+        isOpen={!!missionToUnlock}
+        onClose={() => setMissionToUnlock(null)}
+        demande={missionToUnlock}
+        itemType="mission"
+        creditCost={creditCost}
+        creditBalance={creditBalance}
+        onConfirmUnlock={handleConfirmUnlockMission}
+        unlocking={unlockingMission}
+        user={user}
+      />
     </main>
   )
 }
@@ -280,12 +353,34 @@ const PublicMissionDetail = ({ missionType, missionId, source }) => {
   const [generating, setGenerating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
+  const [aiCreditCost, setAiCreditCost] = useState(1)
+  const [creditBalance, setCreditBalance] = useState(user?.solde_credits || 0)
   const hasLoggedRef = useRef(false)
 
   useEffect(() => {
     document.title = 'Détail mission - Indebel'
     loadMission()
-  }, [missionId, missionType, source])
+    if (user) fetchCreditInfo()
+  }, [missionId, missionType, source, user])
+
+  const fetchCreditInfo = async () => {
+    try {
+      const [settingsRes, balanceRes] = await Promise.all([
+        api.get('/credits/settings/price').catch(() => api.get('/admin-credits/settings/price')).catch(() => ({ data: {} })),
+        api.get('/credits/balance').catch(() => ({ data: {} }))
+      ])
+      if (settingsRes.data?.cout_candidatures_ia !== undefined) {
+        setAiCreditCost(parseInt(settingsRes.data.cout_candidatures_ia, 10))
+      }
+      if (balanceRes.data?.solde !== undefined) {
+        setCreditBalance(parseInt(balanceRes.data.solde, 10))
+      } else if (user?.solde_credits !== undefined) {
+        setCreditBalance(user.solde_credits)
+      }
+    } catch (err) {
+      console.error('Erreur chargement crédits:', err)
+    }
+  }
 
   const loadMission = async () => {
     if (user?.role === 'freelancer' && user?.statut_verification === 'non_verifie') {
@@ -490,10 +585,39 @@ const PublicMissionDetail = ({ missionType, missionId, source }) => {
               </p>
               <h2 className="mt-3 pr-10 text-2xl font-black">{mission.titre}</h2>
               {writeMode === 'ai' && (
-                <Button type="button" onClick={generateAi} loading={generating} className="mt-5 rounded-full bg-[#df6422] hover:bg-[#c5551c]">
-                  <Sparkles className="h-4 w-4" />
-                  Générer avec IA
-                </Button>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between rounded-xl bg-white/10 p-3 text-xs font-semibold text-white/90 border border-white/20">
+                    <span>✨ Tarif Candidature IA : <strong className="text-white">{aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}</strong></span>
+                    <span>Solde actuel : <strong className={creditBalance < aiCreditCost ? "text-amber-300 font-bold" : "text-emerald-300 font-bold"}>{creditBalance} crédit{creditBalance > 1 ? 's' : ''}</strong></span>
+                  </div>
+
+                  {creditBalance < aiCreditCost ? (
+                    <div className="rounded-xl bg-red-500/20 border border-red-400/40 p-3 text-xs text-red-100 font-bold space-y-2">
+                      <p className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-300 flex-shrink-0" />
+                        Crédits insuffisants pour la génération IA ({creditBalance} / {aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(user?.role === 'employer' ? '/employer/credits' : '/freelancer/credits')}
+                        className="inline-flex items-center justify-center rounded-lg bg-[#c02525] px-3 py-2 text-xs font-black text-white hover:bg-[#a91f1f] w-full"
+                      >
+                        Recharger mes crédits
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={generateAi}
+                      loading={generating}
+                      disabled={creditBalance < aiCreditCost}
+                      className="w-full justify-center rounded-full bg-[#df6422] hover:bg-[#c5551c]"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Générer avec IA ({aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''})
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto p-5">

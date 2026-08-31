@@ -115,6 +115,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
         { icon: Briefcase, label: 'Liste des missions', path: '/admin/jobs' },
         { icon: Briefcase, label: 'Candidatures missions', path: '/admin/applications' },
         { icon: FolderTree, label: 'Secteurs', path: '/admin/secteurs' },
+        { icon: FileText, label: 'Contenus métiers', path: '/admin/contenus-metiers' },
         { icon: Layers, label: 'Compétences', path: '/admin/competences' },
         { icon: Globe, label: 'Langues', path: '/admin/langues' },
         { icon: CreditCard, label: 'Type de facturation', path: '/admin/type-facturation' },
@@ -157,6 +158,12 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
         { icon: Star, label: 'Avis prestataires', path: '/admin/avis-prestataires' },
         { icon: Star, label: 'Avis missions', path: '/admin/avis-missions' }
       ]
+    },
+    { 
+      icon: CreditCard, 
+      label: 'Crédits', 
+      path: '/admin/credits',
+      pageId: 'forfaits'
     },
     { 
       icon: Package, 

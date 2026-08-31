@@ -12,6 +12,8 @@ export const devisService = {
 
   updateAdminStatus: (id, action, data = {}) => api.put(`/devis/${id}/${action}`, data),
 
+  marquerTerminee: (id) => api.put(`/devis/${id}/terminer`),
+
   deleteAdminDemande: (id) => api.delete(`/devis/${id}`),
 
   getDevisValides: ({ page = 1, limit = 9 } = {}) =>

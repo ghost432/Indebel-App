@@ -16,7 +16,7 @@ exports.getAllUsers = async (req, res, next) => {
         u.poste, u.competences, u.competences_recherchees,
         u.pays_code, u.indicatif, u.telephone, u.langues_parlees,
         u.a_propos, u.genre, u.tranche_age, u.disponibilite_debut, u.disponibilite_fin,
-        u.experience, u.tarif_journalier, u.disponibilite, u.portfolio_url,
+        u.experience, u.tarif_journalier, u.disponibilite, u.portfolio_url, u.solde_credits,
         u.statut_verification, u.forfait_id, u.forfait_date_expiration, u.forfait_date_debut, u.photo_profil, u.image_couverture,
         u.facebook, u.instagram, u.nom_partenariat, u.created_by,
         COALESCE(
@@ -26,6 +26,30 @@ exports.getAllUsers = async (req, res, next) => {
            LIMIT 1),
           'non_verifie'
         ) as verification_identite_status,
+        COALESCE(
+          (SELECT ROUND(AVG(n.note), 1) FROM (
+            SELECT note, freelancer_id FROM evaluations
+            UNION ALL
+            SELECT note, freelancer_id FROM avis_particuliers WHERE statut = 'public'
+          ) n WHERE n.freelancer_id = u.id),
+          0
+        ) as note_moyenne,
+        COALESCE(
+          (SELECT COUNT(*) FROM (
+            SELECT id, freelancer_id FROM evaluations
+            UNION ALL
+            SELECT id, freelancer_id FROM avis_particuliers WHERE statut = 'public'
+          ) a WHERE a.freelancer_id = u.id),
+          0
+        ) as total_avis,
+        COALESCE(
+          (SELECT SUM(n.note) FROM (
+            SELECT note, freelancer_id FROM evaluations
+            UNION ALL
+            SELECT note, freelancer_id FROM avis_particuliers WHERE statut = 'public'
+          ) n WHERE n.freelancer_id = u.id),
+          0
+        ) as somme_notes,
         f.nom AS forfait_nom, f.couleur_badge AS forfait_couleur, f.badge_premium AS forfait_badge_premium,
         u.created_by, u.admin_permissions, u.nom_partenariat
       FROM users u
@@ -120,7 +144,37 @@ exports.getAllUsers = async (req, res, next) => {
 exports.getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const [users] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    const [users] = await db.query(
+      `SELECT 
+        u.*,
+        COALESCE(
+          (SELECT ROUND(AVG(n.note), 1) FROM (
+            SELECT note, freelancer_id FROM evaluations
+            UNION ALL
+            SELECT note, freelancer_id FROM avis_particuliers WHERE statut = 'public'
+          ) n WHERE n.freelancer_id = u.id),
+          0
+        ) as note_moyenne,
+        COALESCE(
+          (SELECT COUNT(*) FROM (
+            SELECT id, freelancer_id FROM evaluations
+            UNION ALL
+            SELECT id, freelancer_id FROM avis_particuliers WHERE statut = 'public'
+          ) a WHERE a.freelancer_id = u.id),
+          0
+        ) as total_avis,
+        COALESCE(
+          (SELECT SUM(n.note) FROM (
+            SELECT note, freelancer_id FROM evaluations
+            UNION ALL
+            SELECT note, freelancer_id FROM avis_particuliers WHERE statut = 'public'
+          ) n WHERE n.freelancer_id = u.id),
+          0
+        ) as somme_notes
+       FROM users u
+       WHERE u.id = ?`,
+      [id]
+    );
     if (users.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -134,7 +188,11 @@ exports.getUserById = async (req, res, next) => {
 // Update user
 exports.updateUser = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    let targetId = req.params.id;
+    if (!targetId || targetId === 'profile') {
+      targetId = req.user?.id;
+    }
+
     const { facebook, instagram, reseaux_sociaux, ...otherFields } = req.body;
     const fields = [];
     const values = [];
@@ -142,7 +200,11 @@ exports.updateUser = async (req, res, next) => {
     // Mapping des champs frontend vers colonnes BDD
     const fieldMapping = {
       'description_recruteur': 'description_entreprise',
-      'taille_recruteur': 'taille_entreprise'
+      'taille_recruteur': 'taille_entreprise',
+      'photo_couverture': 'image_couverture',
+      'cover_image_url': 'image_couverture',
+      'profile_image_url': 'photo_profil',
+      'avatar': 'photo_profil'
     };
 
     // Appliquer le mapping
@@ -153,10 +215,70 @@ exports.updateUser = async (req, res, next) => {
       }
     }
 
-    // Retirer les champs qui n'existent pas dans la BDD
+    // Helper pour sauvegarder les images base64 sur disque
+    const fs = require('fs');
+    const path = require('path');
+    const saveBase64Image = (base64String, prefix, userId) => {
+      if (!base64String || typeof base64String !== 'string') return base64String;
+
+      // Si c'est déjà une URL HTTP ou relative /api/, ne pas re-sauvegarder
+      if (base64String.startsWith('http://') || base64String.startsWith('https://') || base64String.startsWith('/api/')) {
+        return base64String;
+      }
+
+      const isBase64 = base64String.includes(';base64,') || base64String.length > 500;
+      if (isBase64) {
+        try {
+          let ext = 'jpg';
+          let cleanData = base64String;
+
+          if (base64String.includes(';base64,')) {
+            const parts = base64String.split(';base64,');
+            const header = parts[0];
+            cleanData = parts[1];
+            const mimeMatch = header.match(/data:image\/([a-zA-Z0-9\+\-]+)/);
+            if (mimeMatch && mimeMatch[1]) {
+              ext = mimeMatch[1] === 'jpeg' ? 'jpg' : mimeMatch[1];
+            }
+          }
+
+          cleanData = cleanData.replace(/[\r\n\s]/g, '');
+          const filename = `user_${userId || 'profile'}_${prefix}_${Date.now()}.${ext}`;
+          const profilesDir = path.join(__dirname, '../public/uploads/profiles');
+          if (!fs.existsSync(profilesDir)) {
+            fs.mkdirSync(profilesDir, { recursive: true });
+          }
+          fs.writeFileSync(path.join(profilesDir, filename), Buffer.from(cleanData, 'base64'));
+          console.log(`📸 Image de couverture enregistrée sous : /api/uploads/profiles/${filename}`);
+          return `/api/uploads/profiles/${filename}`;
+        } catch (err) {
+          console.error('Erreur sauvegarde image base64:', err);
+          return null;
+        }
+      }
+      return base64String;
+    };
+
+    if (otherFields.photo_profil) {
+      otherFields.photo_profil = saveBase64Image(otherFields.photo_profil, 'photo', targetId);
+    }
+    if (otherFields.image_couverture) {
+      otherFields.image_couverture = saveBase64Image(otherFields.image_couverture, 'cover', targetId);
+    }
+
+    // Retirer les champs virtuels et non-existants dans la table BDD users
     delete otherFields.ville;
     delete otherFields.province;
     delete otherFields.code_postal;
+    delete otherFields.photo_couverture;
+    delete otherFields.cover_image_url;
+    delete otherFields.profile_image_url;
+    delete otherFields.avatar;
+    delete otherFields.bce_verifie;
+    delete otherFields.forfait_nom;
+    delete otherFields.forfait_couleur;
+    delete otherFields.forfait_badge_premium;
+    delete otherFields.verification_identite_status;
 
     // Gérer les réseaux sociaux individuels (ancienne méthode)
     if (facebook !== undefined) {
@@ -205,17 +327,25 @@ exports.updateUser = async (req, res, next) => {
 
       // Handle JSON fields
       if (key === 'langues_parlees' || key === 'competences' || key === 'competences_recherchees' || key === 'admin_permissions') {
-        if (typeof value === 'string') {
-          // Si c'est déjà une string JSON, l'utiliser directement
+        if (!value) {
           fields.push(`${key} = ?`);
-          values.push(value);
+          values.push(null);
+        } else if (typeof value === 'string') {
+          try {
+            JSON.parse(value);
+            fields.push(`${key} = ?`);
+            values.push(value);
+          } catch (e) {
+            const arr = value.split(',').map(s => s.trim()).filter(Boolean);
+            fields.push(`${key} = ?`);
+            values.push(JSON.stringify(arr));
+          }
         } else if (Array.isArray(value) || typeof value === 'object') {
-          // Si c'est un array ou object, le convertir en JSON
           fields.push(`${key} = ?`);
           values.push(JSON.stringify(value));
         } else {
           fields.push(`${key} = ?`);
-          values.push(value);
+          values.push(JSON.stringify([value]));
         }
       }
       // Handle numeric fields and unique strings - convert empty strings to null
@@ -228,17 +358,54 @@ exports.updateUser = async (req, res, next) => {
           values.push(value);
         }
       }
-      // Handle date fields - convert ISO date to MySQL DATE format (YYYY-MM-DD)
+      else if (key === 'tranche_age') {
+        if (!value) {
+          fields.push(`${key} = ?`);
+          values.push(null);
+        } else {
+          let cleanAge = String(value).replace(' ans', '').trim();
+          if (cleanAge === '50+') cleanAge = '56+';
+          fields.push(`${key} = ?`);
+          values.push(cleanAge);
+        }
+      }
+      // Handle date fields - convert DD/MM/YYYY, YYYY/MM/DD or ISO date to MySQL DATE format (YYYY-MM-DD)
       else if (key === 'disponibilite_debut' || key === 'disponibilite_fin' || key === 'date_debut' || key === 'date_fin') {
         if (value === '' || value === null || value === undefined) {
           fields.push(`${key} = ?`);
           values.push(null);
         } else {
-          // Convert ISO date string to YYYY-MM-DD format
-          const date = new Date(value);
-          const formattedDate = date.toISOString().split('T')[0]; // Get only YYYY-MM-DD part
+          let formattedDate = null;
+          try {
+            if (typeof value === 'string' && value.includes('/')) {
+              const parts = value.split('/');
+              if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                  // Format YYYY/MM/DD
+                  const year = parts[0];
+                  const month = parts[1].padStart(2, '0');
+                  const day = parts[2].padStart(2, '0');
+                  formattedDate = `${year}-${month}-${day}`;
+                } else {
+                  // Format DD/MM/YYYY
+                  const day = parts[0].padStart(2, '0');
+                  const month = parts[1].padStart(2, '0');
+                  const year = parts[2];
+                  formattedDate = `${year}-${month}-${day}`;
+                }
+              }
+            }
+            if (!formattedDate) {
+              const date = new Date(value);
+              if (!isNaN(date.getTime())) {
+                formattedDate = date.toISOString().split('T')[0];
+              }
+            }
+          } catch (e) {
+            console.error(`Erreur formatage date pour ${key}:`, e);
+          }
           fields.push(`${key} = ?`);
-          values.push(formattedDate);
+          values.push(formattedDate || null);
         }
       }
       else {
@@ -251,7 +418,7 @@ exports.updateUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No fields to update' });
     }
 
-    values.push(id);
+    values.push(targetId);
     const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
 
     console.log('Update SQL:', sql);
@@ -266,7 +433,7 @@ exports.updateUser = async (req, res, next) => {
     // Si c'est un sous-admin qui a mis à jour l'utilisateur, notifier les super admins
     if (req.user && req.user.role === 'admin' && req.user.email !== 'admin@indebel.com' && req.user.email !== 'indegobelgique@gmail.com') {
       const subAdminName = req.user.prenom || 'Un sous-admin';
-      const actionMessage = `A mis à jour le profil de l'utilisateur avec l'ID : ${id}`;
+      const actionMessage = `A mis à jour le profil de l'utilisateur avec l'ID : ${targetId}`;
       await notificationService.notifySubAdminAction(
         req.user.id,
         subAdminName,
@@ -278,7 +445,28 @@ exports.updateUser = async (req, res, next) => {
     res.status(200).json({ success: true, message: 'User updated successfully' });
   } catch (error) {
     console.error('Update user error:', error);
-    next(error);
+    if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
+      if (error?.message?.includes('numero_bce') || error?.sqlMessage?.includes('numero_bce')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ce numéro BCE est déjà utilisé par un autre compte.'
+        });
+      }
+      if (error?.message?.includes('email') || error?.sqlMessage?.includes('email')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cette adresse email est déjà enregistrée.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Une des informations saisies est déjà utilisée par un autre compte.'
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: error?.sqlMessage || error?.message || 'Erreur lors de la mise à jour du profil'
+    });
   }
 };
 
@@ -1027,10 +1215,14 @@ exports.getFreelancerCompletedMissions = async (req, res, next) => {
   }
 };
 
-// Get employer published missions
+// Get employer published missions and demandes de devis
 exports.getEmployerPublishedMissions = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Récupérer l'email de l'employeur
+    const [userRows] = await db.query('SELECT id, email FROM users WHERE id = ?', [id]);
+    const employerEmail = userRows.length > 0 ? userRows[0].email : null;
 
     // Récupérer les missions publiées par l'employeur
     const [missions] = await db.query(
@@ -1038,7 +1230,7 @@ exports.getEmployerPublishedMissions = async (req, res, next) => {
         id as mission_id,
         titre,
         description,
-        budget as montant,
+        forfait_mission as montant,
         statut,
         date_creation,
         'forfait_fixe' as type
@@ -1051,7 +1243,7 @@ exports.getEmployerPublishedMissions = async (req, res, next) => {
         id as mission_id,
         titre,
         description,
-        tarif_horaire as montant,
+        forfait_heure as montant,
         statut,
         date_creation,
         'forfait_horaire' as type
@@ -1062,10 +1254,31 @@ exports.getEmployerPublishedMissions = async (req, res, next) => {
       [id, id]
     );
 
+    // Récupérer les demandes de devis publiées par l'employeur (par email)
+    let demandesDevis = [];
+    if (employerEmail) {
+      const [demandes] = await db.query(
+        `SELECT 
+          id,
+          type_travaux as titre,
+          description,
+          budget_estime as montant,
+          statut,
+          created_at as date_creation,
+          'demande_devis' as type
+        FROM demandes_devis
+        WHERE email = ?
+        ORDER BY created_at DESC`,
+        [employerEmail]
+      );
+      demandesDevis = demandes;
+    }
+
     res.status(200).json({
       success: true,
-      total: missions.length,
-      missions: missions.slice(0, 5)
+      total: missions.length + demandesDevis.length,
+      missions: missions,
+      demandes_devis: demandesDevis
     });
   } catch (error) {
     console.error('Error getting employer published missions:', error);

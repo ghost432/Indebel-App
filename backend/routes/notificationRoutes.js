@@ -9,6 +9,7 @@ router.put('/:id/read', authenticate, notificationController.markAsRead);
 router.put('/read-all', authenticate, notificationController.markAllAsRead);
 router.delete('/:id', authenticate, notificationController.deleteNotification);
 router.post('/mission-ignored', authenticate, notificationController.notifyMissionIgnored);
+router.post('/push-token', authenticate, notificationController.savePushToken);
 
 // Routes admin
 router.post('/send-to-all', authenticate, notificationController.sendNotificationToAll);

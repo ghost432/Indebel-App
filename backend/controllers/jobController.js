@@ -489,9 +489,9 @@ exports.deleteJob = async (req, res, next) => {
     const { id } = req.params;
     const employer_id = req.user.id;
 
-    // Check if job exists and belongs to employer
+    // Check if job exists
     const [existingJob] = await db.query(
-      'SELECT employer_id FROM jobs WHERE id = ?',
+      'SELECT * FROM jobs WHERE id = ?',
       [id]
     );
 
@@ -502,11 +502,51 @@ exports.deleteJob = async (req, res, next) => {
       });
     }
 
-    if (existingJob[0].employer_id !== employer_id && req.user.role !== 'admin') {
+    const job = existingJob[0];
+
+    if (job.employer_id !== employer_id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Non autorisé à supprimer cette offre'
       });
+    }
+
+    // Si la suppression est effectuée par l'admin (ou pour notifier le propriétaire)
+    if (req.user.role === 'admin' && job.employer_id) {
+      await db.query(
+        'INSERT INTO notifications (user_id, type, titre, message, lien, lu, date_creation) VALUES (?, ?, ?, ?, ?, FALSE, NOW())',
+        [
+          job.employer_id,
+          'warning',
+          '🗑️ Mission supprimée par l\'administration',
+          `Votre mission/offre "${job.titre || 'Mission #' + id}" a été supprimée par l'administration. Elle n'apparaîtra plus dans votre compte.`,
+          '/employer/jobs'
+        ]
+      );
+
+      // Notifier également les candidats
+      try {
+        const [candidates] = await db.query(
+          'SELECT DISTINCT freelancer_id FROM applications WHERE job_id = ?',
+          [id]
+        );
+        for (const candidate of candidates) {
+          if (candidate.freelancer_id && candidate.freelancer_id !== job.employer_id) {
+            await db.query(
+              'INSERT INTO notifications (user_id, type, titre, message, lien, lu, date_creation) VALUES (?, ?, ?, ?, ?, FALSE, NOW())',
+              [
+                candidate.freelancer_id,
+                'info',
+                'ℹ️ Mission supprimée',
+                `La mission "${job.titre}" à laquelle vous aviez candidaté a été supprimée par l'administration.`,
+                '/freelancer/applications'
+              ]
+            );
+          }
+        }
+      } catch (cErr) {
+        console.error('Erreur notification candidats deleteJob:', cErr);
+      }
     }
 
     // Delete job

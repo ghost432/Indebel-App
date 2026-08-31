@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { AlertTriangle, Brain, Bot, Eye, FileText, RefreshCw, Send, Sparkles, Image, X, CheckCircle } from 'lucide-react'
+import { AlertTriangle, Brain, Bot, Eye, FileText, LayoutGrid, List, RefreshCw, Send, Sparkles, Image, X, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
@@ -10,6 +10,10 @@ import PageLoader from '../components/PageLoader'
 import { devisService } from '../services/devisService'
 import { useAuth } from '../context/AuthContext'
 import VerificationPopup from '../components/VerificationPopup'
+import CreditUnlockGuard from '../components/CreditUnlockGuard'
+import api from '../services/api'
+import DevisUnlockModal from '../components/devis/DevisUnlockModal'
+import { API_BASE_URL } from '../config'
 
 const emptyForm = {
   montant_ht: '',
@@ -29,10 +33,13 @@ const computeAmounts = (ht, taux) => {
 }
 
 const FreelancerDevisDisponibles = () => {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [demandes, setDemandes] = useState([])
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, total: 0, limit: 12 })
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState(() => (
+    localStorage.getItem('indebel_freelancer_devis_view_mode') === 'list' ? 'list' : 'grid'
+  ))
   const [selected, setSelected] = useState(null)
   const [detail, setDetail] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -47,6 +54,11 @@ const FreelancerDevisDisponibles = () => {
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [includeDisclaimer, setIncludeDisclaimer] = useState(true)
+  const [devisToUnlock, setDevisToUnlock] = useState(null)
+  const [unlockingDevis, setUnlockingDevis] = useState(false)
+  const [creditCost, setCreditCost] = useState(1)
+  const [aiCreditCost, setAiCreditCost] = useState(2)
+  const [creditBalance, setCreditBalance] = useState(user?.solde_credits || 0)
 
   const totals = useMemo(() => ({
     total: pagination.total || demandes.length,
@@ -57,7 +69,30 @@ const FreelancerDevisDisponibles = () => {
   useEffect(() => {
     document.title = 'Devis disponibles - Indebel'
     loadDemandes(1)
-  }, [])
+    fetchCreditInfo()
+  }, [user])
+
+  const fetchCreditInfo = async () => {
+    try {
+      const [settingsRes, balanceRes] = await Promise.all([
+        api.get('/credits/settings/price').catch(() => api.get('/admin-credits/settings/price')).catch(() => ({ data: {} })),
+        api.get('/credits/balance').catch(() => ({ data: {} }))
+      ])
+      if (settingsRes.data?.cout_vues_devis !== undefined) {
+        setCreditCost(parseInt(settingsRes.data.cout_vues_devis, 10))
+      }
+      if (settingsRes.data?.cout_devis_ia !== undefined) {
+        setAiCreditCost(parseInt(settingsRes.data.cout_devis_ia, 10))
+      }
+      if (balanceRes.data?.solde !== undefined) {
+        setCreditBalance(parseInt(balanceRes.data.solde, 10))
+      } else if (user?.solde_credits !== undefined) {
+        setCreditBalance(user.solde_credits)
+      }
+    } catch (err) {
+      console.error('Erreur chargement crédits:', err)
+    }
+  }
 
   const loadDemandes = async (page = pagination.currentPage) => {
     try {
@@ -72,7 +107,12 @@ const FreelancerDevisDisponibles = () => {
     }
   }
 
-  const openDetail = async (demande) => {
+  const changeViewMode = (mode) => {
+    setViewMode(mode)
+    localStorage.setItem('indebel_freelancer_devis_view_mode', mode)
+  }
+
+  const openDetail = (demande) => {
     if (user && user.statut_verification === 'non_verifie') {
       setShowVerificationModal(true)
       return
@@ -83,6 +123,42 @@ const FreelancerDevisDisponibles = () => {
       setClosedDemande(demande)
       return
     }
+
+    const storageKey = `unlocked_devis_detail_${user?.id}_${demande.id}`
+    if (user?.role === 'admin' || localStorage.getItem(storageKey) === 'true') {
+      openDetailDirect(demande)
+    } else {
+      setDevisToUnlock(demande)
+    }
+  }
+
+  const handleConfirmUnlockDevis = async (demande) => {
+    try {
+      setUnlockingDevis(true)
+      const res = await api.post('/credits/consume', { action: 'view_devis_detail', amount: creditCost })
+      if (res.data?.success) {
+        const storageKey = `unlocked_devis_detail_${user?.id}_${demande.id}`
+        localStorage.setItem(storageKey, 'true')
+        if (res.data.newBalance !== undefined) {
+          setCreditBalance(res.data.newBalance)
+        }
+        if (refreshUser) refreshUser()
+        toast.success(`Devis débloqué ! ${res.data.deducted || creditCost} crédit(s) déduit(s).`)
+        setDevisToUnlock(null)
+        openDetailDirect(demande)
+      }
+    } catch (error) {
+      if (error.response?.data?.code === 'INSUFFICIENT_CREDITS' || error.response?.status === 403) {
+        // Géré par la modale DevisUnlockModal
+      } else {
+        toast.error(error.response?.data?.message || 'Erreur lors de la déduction des crédits')
+      }
+    } finally {
+      setUnlockingDevis(false)
+    }
+  }
+
+  const openDetailDirect = async (demande) => {
     try {
       setSelected(demande)
       setDetail(null)
@@ -221,6 +297,7 @@ const FreelancerDevisDisponibles = () => {
   }
 
   return (
+    <CreditUnlockGuard action="view_devis_disponibles" storageKey="unlocked_devis_disponibles" title="les devis disponibles">
     <div className="space-y-8">
             <section className="mb-8 rounded-[28px] bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-[#c02525]">OPPORTUNITÉS QUALIFIÉES</p>
@@ -235,18 +312,50 @@ const FreelancerDevisDisponibles = () => {
         <p className="text-sm font-bold text-slate-700">
           Page {pagination.currentPage || pagination.page || 1} sur {pagination.totalPages || pagination.pages || 1}
         </p>
-        <Button variant="outline" onClick={() => loadDemandes()}>
-          <RefreshCw className="h-4 w-4" />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center rounded-xl bg-slate-100 p-1" role="group" aria-label="Affichage des devis">
+            <button
+              type="button"
+              onClick={() => changeViewMode('grid')}
+              aria-pressed={viewMode === 'grid'}
+              className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-black transition ${
+                viewMode === 'grid'
+                  ? 'bg-[#082151] text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-white hover:text-[#082151]'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden sm:inline">Grille</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => changeViewMode('list')}
+              aria-pressed={viewMode === 'list'}
+              className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-black transition ${
+                viewMode === 'list'
+                  ? 'bg-[#082151] text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-white hover:text-[#082151]'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              <span className="hidden sm:inline">Liste</span>
+            </button>
+          </div>
+          <Button variant="outline" onClick={() => loadDemandes()}>
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline">Actualiser</span>
+          </Button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-72 animate-pulse rounded-[26px] bg-slate-100" />)}
+        <div className={`grid gap-5 ${viewMode === 'grid' ? 'md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={`${viewMode === 'grid' ? 'h-72' : 'h-52'} animate-pulse rounded-[26px] bg-slate-100`} />
+          ))}
         </div>
       ) : demandes.length ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className={`grid gap-5 ${viewMode === 'grid' ? 'md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
           {demandes.map((demande) => (
             <DevisCard key={demande.id} demande={demande} onOpen={openDetail} />
           ))}
@@ -363,7 +472,8 @@ const FreelancerDevisDisponibles = () => {
                       } else {
                         rawUrl = photo;
                       }
-                      const url = typeof rawUrl === 'string' && (rawUrl.startsWith('http') || rawUrl.startsWith('data:')) ? rawUrl : (rawUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${rawUrl}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/${rawUrl}`);
+                      const baseUrl = API_BASE_URL.replace(/\/api$/, '')
+                      const url = typeof rawUrl === 'string' && (rawUrl.startsWith('http') || rawUrl.startsWith('data:')) ? rawUrl : (rawUrl.startsWith('/uploads') ? `${baseUrl}${rawUrl}` : `${baseUrl}/uploads/${rawUrl}`);
                       return (
                         <div key={idx} className="relative h-24 w-24 rounded-xl border border-slate-200 bg-slate-100 overflow-hidden cursor-zoom-in group shadow-sm hover:shadow-md transition-all" onClick={() => setSelectedPhoto(url)}>
                           <img src={url} alt={`Photo ${idx+1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
@@ -412,10 +522,33 @@ const FreelancerDevisDisponibles = () => {
                   <h3 className="mt-1 text-xl font-black text-slate-900">{detail.type_travaux}</h3>
                 </div>
                 {activeWriteMode === 'ai' && !previewMode && (
-                  <Button type="button" onClick={generateAi} loading={generating} className="bg-[#df6422] hover:bg-[#c5551c] text-white border-0 shadow-sm hover:shadow">
-                    <Bot className="h-4 w-4 mr-2" />
-                    Cliquer ici pour générer le devis avec l'IA
-                  </Button>
+                  <div className="w-full sm:w-auto space-y-2">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-purple-50 p-2.5 text-xs font-semibold text-purple-900 border border-purple-200">
+                      <span>✨ Tarif IA : <strong>{aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''}</strong></span>
+                      <span>Solde : <strong className={creditBalance < aiCreditCost ? "text-red-600 font-bold" : "text-emerald-700 font-bold"}>{creditBalance} crédit{creditBalance > 1 ? 's' : ''}</strong></span>
+                    </div>
+
+                    {creditBalance < aiCreditCost ? (
+                      <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-bold space-y-2">
+                        <p className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          Solde insuffisant pour la génération IA ({creditBalance} / {aiCreditCost} crédits).
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate(user?.role === 'employer' ? '/employer/credits' : '/freelancer/credits')}
+                          className="inline-flex items-center justify-center rounded-lg bg-[#c02525] px-3 py-1.5 text-xs font-black text-white hover:bg-[#a91f1f] w-full shadow-sm"
+                        >
+                          Recharger mes crédits
+                        </button>
+                      </div>
+                    ) : (
+                      <Button type="button" onClick={generateAi} loading={generating} disabled={creditBalance < aiCreditCost} className="w-full bg-[#df6422] hover:bg-[#c5551c] text-white border-0 shadow-sm hover:shadow">
+                        <Bot className="h-4 w-4 mr-2" />
+                        Générer avec l'IA ({aiCreditCost} crédit{aiCreditCost > 1 ? 's' : ''})
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
               
@@ -618,8 +751,20 @@ const FreelancerDevisDisponibles = () => {
         </div>
       )}
 
+      <DevisUnlockModal
+        isOpen={!!devisToUnlock}
+        onClose={() => setDevisToUnlock(null)}
+        demande={devisToUnlock}
+        creditCost={creditCost}
+        creditBalance={creditBalance}
+        onConfirmUnlock={handleConfirmUnlockDevis}
+        unlocking={unlockingDevis}
+        user={user}
+      />
+
       <QuotaWidget />
     </div>
+    </CreditUnlockGuard>
   )
 }
 
