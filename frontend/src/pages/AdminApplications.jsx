@@ -239,6 +239,13 @@ const AdminApplications = () => {
                         </span>
                       </span>
                     </div>
+
+                    { (demande.message_freelancer || demande.message || demande.note_complementaire) && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-slate-800">
+                        <span className="font-bold text-blue-900 block mb-1">Note / Message de présentation du candidat :</span>
+                        <p className="italic text-slate-700 font-medium">"{demande.message_freelancer || demande.message || demande.note_complementaire}"</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>

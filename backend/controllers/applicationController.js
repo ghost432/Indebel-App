@@ -5,8 +5,9 @@ const notificationService = require('../services/notificationService');
 // Create application
 exports.createApplication = async (req, res, next) => {
   try {
-    const { job_id } = req.body;
+    const { job_id, message, note_complementaire } = req.body;
     const freelancer_id = req.user.id;
+    const noteContent = message || note_complementaire || null;
 
     // Try to find mission in both tables (hourly and fixed)
     let missionData = null;
@@ -87,8 +88,8 @@ exports.createApplication = async (req, res, next) => {
 
     // Create application
     const [result] = await db.query(
-      'INSERT INTO applications (job_id, freelancer_id, statut) VALUES (?, ?, ?)',
-      [job_id, freelancer_id, 'en_attente']
+      'INSERT INTO applications (job_id, freelancer_id, statut, message) VALUES (?, ?, ?, ?)',
+      [job_id, freelancer_id, 'en_attente', noteContent]
     );
 
     // Get employer and freelancer data

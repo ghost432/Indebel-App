@@ -294,6 +294,13 @@ const EmployerApplications = () => {
                       </p>
                     </div>
 
+                    { (app.message_freelancer || app.message || app.note_complementaire) && (
+                      <div className="mb-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded text-sm text-slate-800">
+                        <span className="font-bold text-blue-900 block mb-1">Note / Message de présentation du candidat :</span>
+                        <p className="italic text-slate-700 font-medium">"{app.message_freelancer || app.message || app.note_complementaire}"</p>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                       <div className="flex items-center p-2 bg-gray-50 rounded">
                         <User className="h-4 w-4 mr-2 text-primary-600" />
